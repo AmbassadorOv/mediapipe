@@ -30,10 +30,15 @@ namespace mediapipe {
 
 class CalculatorGraph;
 
-// The class for running the Calculator with given inputs and examining outputs.
+/**
+ * @brief The class for running the Calculator with given inputs and examining
+ * outputs.
+ */
 class CalculatorRunner {
  public:
-  // A representation of input or output stream contents.
+  /**
+   * @brief A representation of input or output stream contents.
+   */
   struct StreamContents {
     // The Packets in the stream.
     std::vector<Packet> packets;
@@ -43,37 +48,36 @@ class CalculatorRunner {
   // A collection of StreamContents by either index or tag.
   typedef internal::Collection<StreamContents> StreamContentsSet;
 
-  // Preferred constructor.
-  // All the needed information comes from the node config.
-  // Example:
-  //   CalculatorRunner runner(R"(
-  //       calculator: "ScaleImageCalculator"
-  //       input_stream: "ycbcr_frames"
-  //       output_stream: "FRAMES:srgb_frames"
-  //       output_stream: "VIDEO_HEADER:srgb_frames_header"
-  //       options {
-  //         [mediapipe.ScaleImageCalculatorOptions.ext] {
-  //           target_height: 10
-  //           preserve_aspect_ratio: true
-  //           output_format: SRGB
-  //           algorithm: AREA
-  //         }
-  //       }
-  //   )");
+  /**
+   * @brief Preferred constructor.
+   * @param node_config The node config.
+   */
   explicit CalculatorRunner(const CalculatorGraphConfig::Node& node_config);
 #if !defined(MEDIAPIPE_PROTO_LITE)
-  // Convenience constructor which takes a node_config string directly.
+  /**
+   * @brief Convenience constructor which takes a node_config string directly.
+   * @param node_config_string The node config string.
+   */
   explicit CalculatorRunner(const std::string& node_config_string);
-  // Convenience constructor to initialize a calculator which uses indexes
-  // (not tags) for all its fields.
-  // NOTE: This constructor calls proto_ns::TextFormat::ParseFromString(), which
-  // is not available when using lite protos.
+  /**
+   * @brief Convenience constructor to initialize a calculator which uses
+   * indexes (not tags) for all its fields.
+   * @param calculator_type The type of the calculator.
+   * @param options_string The options string.
+   * @param num_inputs The number of inputs.
+   * @param num_outputs The number of outputs.
+   * @param num_side_packets The number of side packets.
+   */
   CalculatorRunner(const std::string& calculator_type,
                    const std::string& options_string, int num_inputs,
                    int num_outputs, int num_side_packets);
 #endif
-  // Minimal constructor which requires additional calls to define inputs,
-  // outputs, and input side packets.  Prefer using another constructor.
+  /**
+   * @brief Minimal constructor which requires additional calls to define
+   * inputs, outputs, and input side packets.
+   * @param calculator_type The type of the calculator.
+   * @param options The calculator options.
+   */
   ABSL_DEPRECATED("Initialize CalculatorRunner with a proto instead.")
   CalculatorRunner(const std::string& calculator_type,
                    const CalculatorOptions& options);
@@ -83,8 +87,11 @@ class CalculatorRunner {
 
   ~CalculatorRunner();
 
-  // Sets the number of input streams, output streams, or input side packets,
-  // respectively. May not be called after Run() has been called.
+  /**
+   * @brief Sets the number of input streams, output streams, or input side
+   * packets, respectively.
+   * @param n The number of streams or packets.
+   */
   ABSL_DEPRECATED("Initialize CalculatorRunner with a proto instead.")
   void SetNumInputs(int n);
   ABSL_DEPRECATED("Initialize CalculatorRunner with a proto instead.")
@@ -92,9 +99,11 @@ class CalculatorRunner {
   ABSL_DEPRECATED("Initialize CalculatorRunner with a proto instead.")
   void SetNumInputSidePackets(int n);
 
-  // Initializes the inputs, outputs, or side packets using a
-  // TagAndNameInfo.  This sets the corresponding section of node_config_.
-  // May not be called after Run() has been called.
+  /**
+   * @brief Initializes the inputs, outputs, or side packets using a
+   * TagAndNameInfo.
+   * @param info The TagAndNameInfo.
+   */
   ABSL_DEPRECATED("Initialize CalculatorRunner with a proto instead.")
   void InitializeInputs(const tool::TagAndNameInfo& info);
   ABSL_DEPRECATED("Initialize CalculatorRunner with a proto instead.")
@@ -102,32 +111,47 @@ class CalculatorRunner {
   ABSL_DEPRECATED("Initialize CalculatorRunner with a proto instead.")
   void InitializeInputSidePackets(const tool::TagAndNameInfo& info);
 
-  // Returns mutable access to the input stream contents.
+  /**
+   * @brief Returns mutable access to the input stream contents.
+   * @return A pointer to the input stream contents.
+   */
   StreamContentsSet* MutableInputs() { return inputs_.get(); }
-  // Returns mutable access to the input side packets.
+
+  /**
+   * @brief Returns mutable access to the input side packets.
+   * @return A pointer to the input side packets.
+   */
   PacketSet* MutableSidePackets() { return input_side_packets_.get(); }
 
-  // Runs the calculator, by calling Open(), Process() with the
-  // inputs provided via mutable_inputs(), and Close(). Returns the
-  // absl::Status from CalculatorGraph::Run().  Internally, Run()
-  // constructs a CalculatorGraph in the first call, and calls
-  // CalculatorGraph::Run().  A single instance of CalculatorRunner
-  // uses the same instance of CalculatorGraph for all runs.
+  /**
+   * @brief Runs the calculator.
+   * @return absl::Status OkStatus() on success, any other status on failure.
+   */
   absl::Status Run();
 
-  // Returns the vector of contents of the output streams. The .header
-  // field contains the stream header and the .packets field contains
-  // the Packets from the stream, unless SetOutputPacketCallback()
-  // has been called with non-nullptr, in which case .packets will be empty.
+  /**
+   * @brief Returns the vector of contents of the output streams.
+   * @return The vector of contents of the output streams.
+   */
   const StreamContentsSet& Outputs() const { return *outputs_; }
 
-  // Returns the access to the output side packets.
+  /**
+   * @brief Returns the access to the output side packets.
+   * @return The access to the output side packets.
+   */
   const PacketSet& OutputSidePackets() { return *output_side_packets_; }
 
-  // Returns a graph counter.
+  /**
+   * @brief Returns a graph counter.
+   * @param name The name of the counter.
+   * @return A pointer to the counter.
+   */
   mediapipe::Counter* GetCounter(const std::string& name);
 
-  // Returns all graph counters values.
+  /**
+   * @brief Returns all graph counters values.
+   * @return A map of counter names to values.
+   */
   std::map<std::string, int64_t> GetCountersValues();
 
  private:

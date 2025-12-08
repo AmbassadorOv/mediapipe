@@ -6,12 +6,15 @@
 #
 #      http://www.apache.org/licenses/LICENSE-2.0
 #
-# Unless requi_RED by applicable law or agreed to in writing, software
+# Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""MediaPipe solution drawing styles."""
+"""MediaPipe solution drawing styles.
+
+This module contains the default drawing styles for MediaPipe solutions.
+"""
 
 from typing import Mapping, Tuple
 
@@ -155,6 +158,9 @@ _POSE_LANDMARKS_RIGHT = frozenset([
 def get_default_hand_landmarks_style() -> Mapping[int, DrawingSpec]:
   """Returns the default hand landmarks drawing style.
 
+  This style is consisting of a mapping from each hand landmark to its default
+  drawing spec.
+
   Returns:
       A mapping from each hand landmark to its default drawing spec.
   """
@@ -168,6 +174,9 @@ def get_default_hand_landmarks_style() -> Mapping[int, DrawingSpec]:
 def get_default_hand_connections_style(
 ) -> Mapping[Tuple[int, int], DrawingSpec]:
   """Returns the default hand connections drawing style.
+
+  This style is consisting of a mapping from each hand connection to its
+  default drawing spec.
 
   Returns:
       A mapping from each hand connection to its default drawing spec.
@@ -183,6 +192,9 @@ def get_default_face_mesh_contours_style(
     i: int = 0,
 ) -> Mapping[Tuple[int, int], DrawingSpec]:
   """Returns the default face mesh contours drawing style.
+
+  This style is consisting of a mapping from each face mesh contours connection
+  to its default drawing spec.
 
   Args:
       i: The id for default style. Currently there are two default styles.
@@ -206,8 +218,11 @@ def get_default_face_mesh_contours_style(
 def get_default_face_mesh_tesselation_style() -> DrawingSpec:
   """Returns the default face mesh tesselation drawing style.
 
+  This style is consisting of a single drawing spec for all the face mesh
+  tesselation connections.
+
   Returns:
-      A DrawingSpec.
+      A DrawingSpec for the face mesh tesselation.
   """
   return DrawingSpec(color=_GRAY, thickness=_THICKNESS_TESSELATION)
 
@@ -215,6 +230,9 @@ def get_default_face_mesh_tesselation_style() -> DrawingSpec:
 def get_default_face_mesh_iris_connections_style(
 ) -> Mapping[Tuple[int, int], DrawingSpec]:
   """Returns the default face mesh iris connections drawing style.
+
+  This style is consisting of a mapping from each iris connection to its
+  default drawing spec.
 
   Returns:
        A mapping from each iris connection to its default drawing spec.
@@ -231,6 +249,9 @@ def get_default_face_mesh_iris_connections_style(
 
 def get_default_pose_landmarks_style() -> Mapping[int, DrawingSpec]:
   """Returns the default pose landmarks drawing style.
+
+  This style is consisting of a mapping from each pose landmark to its default
+  drawing spec.
 
   Returns:
       A mapping from each pose landmark to its default drawing spec.

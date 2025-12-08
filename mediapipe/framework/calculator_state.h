@@ -22,7 +22,7 @@
 #include <string>
 
 // TODO: Move protos in another CL after the C++ code migration.
-#include "absl/base/macros.h"
+#include "absl/base/macros.hh"
 #include "absl/status/status.h"
 #include "mediapipe/framework/calculator.pb.h"
 #include "mediapipe/framework/counter.h"
@@ -39,12 +39,16 @@
 namespace mediapipe {
 
 class ProfilingContext;
-// Holds data that the Calculator needs access to.  This data is not
-// stored in Calculator directly since Calculator will be destroyed after
-// every CalculatorGraph::Run() .  It is not stored in CalculatorNode
-// because Calculator should not depend on CalculatorNode.  All
-// information conveyed in this class is flowing from the CalculatorNode
-// to the Calculator.
+
+/**
+ * @brief Holds data that the Calculator needs access to.
+ *
+ * This data is not stored in Calculator directly since Calculator will be
+ * destroyed after every CalculatorGraph::Run().  It is not stored in
+// CalculatorNode because Calculator should not depend on CalculatorNode.  All
+ * information conveyed in this class is flowing from the CalculatorNode
+ * to the Calculator.
+ */
 class CalculatorState {
  public:
   CalculatorState(const std::string& node_name, int node_id,
@@ -56,72 +60,148 @@ class CalculatorState {
   CalculatorState& operator=(const CalculatorState&) = delete;
   ~CalculatorState();
 
-  // Called before every call to Calculator::Open() (during the PrepareForRun
-  // phase).
+  /**
+   * @brief Called before every call to Calculator::Open() (during the
+   * PrepareForRun phase).
+   */
   void ResetBetweenRuns();
 
+  /**
+   * @brief Returns the type of the calculator.
+   * @return The type of the calculator.
+   */
   const std::string& CalculatorType() const { return calculator_type_; }
+
+  /**
+   * @brief Returns the options given to this calculator.
+   * @return The options given to this calculator.
+   */
   const CalculatorOptions& Options() const { return node_config_.options(); }
-  // Returns the options given to this calculator.  Template argument T must
-  // be the type of the protobuf extension message or the protobuf::Any
-  // message containing the options.
+
+  /**
+   * @brief Returns the options given to this calculator.
+   * @tparam T The type of the protobuf extension message or the protobuf::Any
+   * message containing the options.
+   * @return The options given to this calculator.
+   */
   template <class T>
   const T& Options() const {
     return options_.Get<T>();
   }
+
+  /**
+   * @brief Returns true if the calculator has options of the given type.
+   * @tparam T The type of the options.
+   * @return True if the calculator has options of the given type.
+   */
   template <class T>
   bool HasOptions() const {
     return options_.Has<T>();
   }
+
+  /**
+   * @brief Returns the name of the calculator node.
+   * @return The name of the calculator node.
+   */
   const std::string& NodeName() const { return node_name_; }
+
+  /**
+   * @brief Returns the ID of the calculator node.
+   * @return The ID of the calculator node.
+   */
   int NodeId() const { return node_id_; }
+
+  /**
+   * @brief Returns the maximum number of in-flight Process() calls.
+   * @return The maximum number of in-flight Process() calls.
+   */
   int NodeMaxInFlight() const { return node_config_.max_in_flight(); }
 
-  ////////////////////////////////////////
-  // Interface for Calculator.
-  ////////////////////////////////////////
+  /**
+   * @brief Returns the input side packets.
+   * @return The input side packets.
+   */
   const PacketSet& InputSidePackets() const { return *input_side_packets_; }
+
+  /**
+   * @brief Returns the output side packets.
+   * @return The output side packets.
+   */
   OutputSidePacketSet& OutputSidePackets() { return *output_side_packets_; }
 
-  // Returns a counter using the graph's counter factory. The counter's
-  // name is the passed-in name, prefixed by the calculator NodeName.
+  /**
+   * @brief Returns a counter using the graph's counter factory.
+   * @param name The name of the counter.
+   * @return A pointer to the counter.
+   */
   Counter* GetCounter(const std::string& name);
 
-  // Returns a counter set, which can be passed to other classes, to generate
-  // counters.  NOTE: This differs from GetCounter, in that the counters
-  // created by this counter set do not have the NodeName prefix.
+  /**
+   * @brief Returns a counter set, which can be passed to other classes, to
+   * generate counters.
+   * @return A pointer to the counter factory.
+   */
   CounterFactory* GetCounterFactory();
 
+  /**
+   * @brief Returns the shared profiling context.
+   * @return The shared profiling context.
+   */
   std::shared_ptr<ProfilingContext> GetSharedProfilingContext() const {
     return profiling_context_;
   }
 
-  // Returns the graph-level service manager for sharing its services with
-  // calculator-nested MP graphs.
+  /**
+   * @brief Returns the graph-level service manager.
+   * @return The graph-level service manager.
+   */
   const GraphServiceManager* GetGraphServiceManager() const {
     return graph_service_manager_;
   }
 
-  // Returns calculator interface for loading resources.
+  /**
+   * @brief Returns calculator interface for loading resources.
+   * @return The calculator interface for loading resources.
+   */
   const Resources& GetResources() { return *resources_; }
 
-  ////////////////////////////////////////
-  // Interface for CalculatorNode.
-  ////////////////////////////////////////
-  // Sets the input side packets.
+  /**
+   * @brief Sets the input side packets.
+   * @param input_side_packets The input side packets.
+   */
   void SetInputSidePackets(const PacketSet* input_side_packets);
-  // Sets the output side packets.
+
+  /**
+   * @brief Sets the output side packets.
+   * @param output_side_packets The output side packets.
+   */
   void SetOutputSidePackets(OutputSidePacketSet* output_side_packets);
-  // Sets the counter factory.
+
+  /**
+   * @brief Sets the counter factory.
+   * @param counter_factory The counter factory.
+   */
   void SetCounterFactory(CounterFactory* counter_factory) {
     counter_factory_ = counter_factory;
   }
 
+  /**
+   * @brief Sets a service packet.
+   * @param service The service.
+   * @param packet The service packet.
+   * @return absl::Status OkStatus() on success, any other status on failure.
+   */
   absl::Status SetServicePacket(const GraphServiceBase& service,
                                 Packet packet) {
     return calculator_service_manager_.SetServicePacket(service, packet);
   }
 
+  /**
+   * @brief Gets a service object.
+   * @tparam T The type of the service object.
+   * @param service The service.
+   * @return The service object.
+   */
   template <typename T>
   std::shared_ptr<T> GetServiceObject(const GraphService<T>& service) {
     return calculator_service_manager_.GetServiceObject(service);

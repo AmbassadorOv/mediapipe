@@ -14,12 +14,22 @@
 
 namespace mediapipe {
 
+/**
+ * @brief Manages graph-level services.
+ */
 class GraphServiceManager {
  public:
   using ServiceMap = std::map<std::string, Packet>;
 
   GraphServiceManager() = default;
 
+  /**
+   * @brief Sets a service object.
+   * @tparam T The type of the service object.
+   * @param service The service.
+   * @param object The service object.
+   * @return absl::Status OkStatus() on success, any other status on failure.
+   */
   template <typename T>
   absl::Status SetServiceObject(const GraphService<T>& service,
                                 std::shared_ptr<T> object) {
@@ -29,12 +39,28 @@ class GraphServiceManager {
                             MakePacket<std::shared_ptr<T>>(std::move(object)));
   }
 
+  /**
+   * @brief Sets a service packet.
+   * @param service The service.
+   * @param p The service packet.
+   * @return absl::Status OkStatus() on success, any other status on failure.
+   */
   absl::Status SetServicePacket(const GraphServiceBase& service, Packet p);
 
+  /**
+   * @brief Sets the service packets.
+   * @param service_packets The service packets.
+   */
   void SetServicePackets(const ServiceMap& service_packets) {
     service_packets_ = service_packets;
   }
 
+  /**
+   * @brief Gets a service object.
+   * @tparam T The type of the service object.
+   * @param service The service.
+   * @return The service object.
+   */
   template <typename T>
   std::shared_ptr<T> GetServiceObject(const GraphService<T>& service) const {
     Packet p = GetServicePacket(service);
@@ -45,6 +71,11 @@ class GraphServiceManager {
 
     return ptr;
   }
+
+  /**
+   * @brief Returns the service packets.
+   * @return The service packets.
+   */
   const ServiceMap& ServicePackets() const { return service_packets_; }
 
  private:

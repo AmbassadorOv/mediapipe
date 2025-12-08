@@ -2,8 +2,7 @@
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
+# You may
 #      http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
@@ -11,7 +10,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""MediaPipe solution drawing utils."""
+"""MediaPipe solution drawing utils.
+
+This module contains the drawing utils for MediaPipe solutions.
+"""
 
 import dataclasses
 import math
@@ -38,6 +40,7 @@ BLUE_COLOR = (255, 0, 0)
 
 @dataclasses.dataclass
 class DrawingSpec:
+  """Drawing spec for annotations."""
   # Color for drawing the annotation. Default to the white color.
   color: Tuple[int, int, int] = WHITE_COLOR
   # Thickness for drawing the annotation. Default to 2 pixels.
@@ -49,7 +52,18 @@ class DrawingSpec:
 def _normalized_to_pixel_coordinates(
     normalized_x: float, normalized_y: float, image_width: int,
     image_height: int) -> Union[None, Tuple[int, int]]:
-  """Converts normalized value pair to pixel coordinates."""
+  """Converts normalized value pair to pixel coordinates.
+
+  Args:
+    normalized_x: A normalized x coordinate.
+    normalized_y: A normalized y coordinate.
+    image_width: The width of the image.
+    image_height: The height of the image.
+
+  Returns:
+    A tuple of (x, y) pixel coordinates, or None if the coordinates are not
+    valid.
+  """
 
   # Checks if the float value is between 0 and 1.
   def is_valid_normalized_value(value: float) -> bool:
@@ -70,7 +84,7 @@ def draw_detection(
     detection: detection_pb2.Detection,
     keypoint_drawing_spec: DrawingSpec = DrawingSpec(color=RED_COLOR),
     bbox_drawing_spec: DrawingSpec = DrawingSpec()):
-  """Draws the detction bounding box and keypoints on the image.
+  """Draws the detection bounding box and keypoints on the image.
 
   Args:
     image: A three channel BGR image represented as numpy ndarray.

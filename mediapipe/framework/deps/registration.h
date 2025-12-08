@@ -41,134 +41,12 @@
 
 namespace mediapipe {
 
-// Usage:
-//
-// === Defining a registry ================================================
-//
-//  class Widget {};
-//
-//  using WidgetRegistry =
-//      GlobalFactoryRegistry<unique_ptr<Widget>,                 // return
-//                            unique_ptr<Gadget>, const Thing*>   // args
-//
-// === Registering an implementation =======================================
-//
-//  class MyWidget : public Widget {
-//    static unique_ptr<Widget> Create(unique_ptr<Gadget> arg,
-//                                     const Thing* thing) {
-//      return MakeUnique<Widget>(std::move(arg), thing);
-//    }
-//    ...
-//  };
-//
-//  REGISTER_FACTORY_FUNCTION_QUALIFIED(
-//      WidgetRegistry, widget_registration,
-//      ::my_ns::MyWidget, MyWidget::Create);
-//
-// === Using std::function =================================================
-//
-//  class Client {};
-//
-//  using ClientRegistry =
-//      GlobalFactoryRegistry<absl::StatusOr<unique_ptr<Client>>;
-//
-//  class MyClient : public Client {
-//   public:
-//    MyClient(unique_ptr<Backend> backend)
-//      : backend_(std::move(backend)) {}
-//   private:
-//     const std::unique_ptr<Backend> backend_;
-//  };
-//
-//  // Any std::function that returns a Client is valid to pass here. Below,
-//  // we use a lambda.
-//  REGISTER_FACTORY_FUNCTION_QUALIFIED(
-//      ClientRegistry, client_registration,
-//      ::my_ns::MyClient,
-//      []() {
-//        auto backend = absl::make_unique<Backend>("/path/to/backend");
-//        const absl::Status status = backend->Init();
-//        if (!status.ok()) {
-//          return status;
-//        }
-//        std::unique_ptr<Client> client
-//            = absl::make_unique<MyClient>(std::move(backend));
-//        return client;
-//      });
-//
-// === Using the registry to create instances ==============================
-//
-//  // Registry will return absl::StatusOr<Object>
-//  absl::StatusOr<unique_ptr<Widget>> s_or_widget =
-//      WidgetRegistry::CreateByName(
-//          "my_ns.MyWidget", std::move(gadget), thing);
-//  // Registry will return NOT_FOUND if the name is unknown.
-//  if (!s_or_widget.ok()) ... // handle error
-//  DoStuffWithWidget(std::move(s_or_widget).value());
-//
-//  // It's also possible to find an instance by name within a source namespace.
-//  auto s_or_widget = WidgetRegistry::CreateByNameInNamespace(
-//      "my_ns.sub_namespace", "MyWidget");
-//
-//  // It's also possible to just check if a name is registered without creating
-//  // an instance.
-//  bool registered = WidgetRegistry::IsRegistered("my_ns::MyWidget");
-//
-//  // It's also possible to iterate through all registered function names.
-//  // This might be useful if clients outside of your codebase are registering
-//  // plugins.
-//  for (const auto& name : WidgetRegistry::GetRegisteredNames()) {
-//    absl::StatusOr<unique_ptr<Widget>> s_or_widget =
-//        WidgetRegistry::CreateByName(name, std::move(gadget), thing);
-//    ...
-//  }
-//
-// === Injecting instances for testing =====================================
-//
-// Unregister unregisterer(WidgetRegistry::Register(
-//     "MockWidget",
-//      [](unique_ptr<Gadget> arg, const Thing* thing) {
-//        ...
-//      }));
-
-namespace registration_internal {
-inline constexpr char kCxxSep[] = "::";
-inline constexpr char kNameSep[] = ".";
-
-template <typename T>
-struct WrapStatusOr {
-  using type = absl::StatusOr<T>;
-};
-
-// Specialization to avoid double-wrapping types that are already StatusOrs.
-template <typename T>
-struct WrapStatusOr<absl::StatusOr<T>> {
-  using type = absl::StatusOr<T>;
-};
-
-// Defining a member of this type causes P to be ODR-used, which forces its
-// instantiation if it's a static member of a template.
-// Previously we depended on the pointer's value to determine whether the size
-// of a character array is 0 or 1, forcing it to be instantiated so the
-// compiler can determine the object's layout. But using it as a template
-// argument is more compact.
-template <auto* P>
-struct ForceStaticInstantiation {
-#ifdef _MSC_VER
-  // Just having it as the template argument does not count as a use for
-  // MSVC.
-  static constexpr bool Use() { return P != nullptr; }
-  char force_static[Use()];
-#endif  // _MSC_VER
-};
-
-}  // namespace registration_internal
-
-class NamespaceAllowlist {
- public:
-  static const absl::flat_hash_set<std::string>& TopNamespaces();
-};
-
+/**
+ * @brief A registry for functions that create objects.
+ *
+ * @tparam R The return type of the functions in the registry.
+ * @tparam Args The argument types of the functions in the registry.
+ */
 template <typename R, typename... Args>
 class FunctionRegistry {
  public:
@@ -179,6 +57,12 @@ class FunctionRegistry {
   FunctionRegistry(const FunctionRegistry&) = delete;
   FunctionRegistry& operator=(const FunctionRegistry&) = delete;
 
+  /**
+   * @brief Registers a function with the given name.
+   * @param name The name of the function.
+   * @param func The function to register.
+   * @return A registration token.
+   */
   RegistrationToken Register(absl::string_view name, Function func)
       ABSL_LOCKS_EXCLUDED(lock_) {
     std::string normalized_name = GetNormalizedName(name);
@@ -196,15 +80,13 @@ class FunctionRegistry {
     return RegistrationToken([]() {});
   }
 
-  // Force 'args' to be deduced by templating the function, instead of just
-  // accepting Args. This is necessary to make 'args' a forwarding reference as
-  // opposed to a plain rvalue reference.
-  // https://isocpp.org/blog/2012/11/universal-references-in-c11-scott-meyers
-  //
-  // The absl::enable_if_t is used to disable this method if Args2 are not
-  // convertible to Args. This will allow the compiler to identify the offending
-  // line (i.e. the line where the method is called) in the first error message,
-  // rather than nesting it multiple levels down the error stack.
+  /**
+   * @brief Invokes the specified factory function and returns the result.
+   * @tparam Args2 The types of the arguments to the function.
+   * @param name The name of the function to invoke.
+   * @param args The arguments to the function.
+   * @return The result of the function invocation.
+   */
   template <typename... Args2,
             absl::enable_if_t<std::is_convertible<std::tuple<Args2...>,
                                                   std::tuple<Args...>>::value,
@@ -224,33 +106,45 @@ class FunctionRegistry {
     return function(std::forward<Args2>(args)...);
   }
 
-  // Invokes the specified factory function and returns the result.
-  // Namespaces in |name| and |ns| are separated by kNameSep.
+  /**
+   * @brief Invokes the specified factory function and returns the result.
+   * @tparam Args2 The types of the arguments to the function.
+   * @param ns The namespace of the function.
+   * @param name The name of the function.
+   * @param args The arguments to the function.
+   * @return The result of the function invocation.
+   */
   template <typename... Args2>
   ReturnType Invoke(absl::string_view ns, absl::string_view name,
                     Args2&&... args) ABSL_LOCKS_EXCLUDED(lock_) {
     return Invoke(GetQualifiedName(ns, name), args...);
   }
 
-  // Note that it's possible for registered implementations to be subsequently
-  // unregistered, though this will never happen with registrations made via
-  // MEDIAPIPE_REGISTER_FACTORY_FUNCTION.
+  /**
+   * @brief Returns true if the specified factory function is available.
+   * @param name The name of the function.
+   * @return True if the specified factory function is available.
+   */
   bool IsRegistered(absl::string_view name) const ABSL_LOCKS_EXCLUDED(lock_) {
     absl::ReaderMutexLock lock(&lock_);
     return functions_.count(name) != 0;
   }
 
-  // Returns true if the specified factory function is available.
-  // Namespaces in |name| and |ns| are separated by kNameSep.
+  /**
+   * @brief Returns true if the specified factory function is available.
+   * @param ns The namespace of the function.
+   * @param name The name of the function.
+   * @return True if the specified factory function is available.
+   */
   bool IsRegistered(absl::string_view ns, absl::string_view name) const
       ABSL_LOCKS_EXCLUDED(lock_) {
     return IsRegistered(GetQualifiedName(ns, name));
   }
 
-  // Returns a vector of all registered function names.
-  // Note that it's possible for registered implementations to be subsequently
-  // unregistered, though this will never happen with registrations made via
-  // MEDIAPIPE_REGISTER_FACTORY_FUNCTION.
+  /**
+   * @brief Returns a vector of all registered function names.
+   * @return A vector of all registered function names.
+   */
   std::unordered_set<std::string> GetRegisteredNames() const
       ABSL_LOCKS_EXCLUDED(lock_) {
     absl::ReaderMutexLock lock(&lock_);
@@ -262,9 +156,11 @@ class FunctionRegistry {
     return names;
   }
 
-  // Normalizes a C++ qualified name.  Validates the name qualification.
-  // The name must be either unqualified or fully qualified with a leading "::".
-  // The leading "::" in a fully qualified name is stripped.
+  /**
+   * @brief Normalizes a C++ qualified name.
+   * @param name The name to normalize.
+   * @return The normalized name.
+   */
   std::string GetNormalizedName(absl::string_view name) {
     using ::mediapipe::registration_internal::kCxxSep;
     std::vector<std::string> names = absl::StrSplit(name, kCxxSep);
@@ -278,8 +174,12 @@ class FunctionRegistry {
     return absl::StrJoin(names, kCxxSep);
   }
 
-  // Returns the registry key for a name specified within a namespace.
-  // Namespaces are separated by kNameSep.
+  /**
+   * @brief Returns the registry key for a name specified within a namespace.
+   * @param ns The namespace.
+   * @param name The name.
+   * @return The registry key.
+   */
   std::string GetQualifiedName(absl::string_view ns,
                                absl::string_view name) const {
     using ::mediapipe::registration_internal::kCxxSep;
@@ -306,7 +206,11 @@ class FunctionRegistry {
     return cxx_name;
   }
 
-  // Returns a type name with '.' separated namespaces.
+  /**
+   * @brief Returns a type name with '.' separated namespaces.
+   * @param cxx_type_name The C++ type name.
+   * @return A type name with '.' separated namespaces.
+   */
   static std::string GetLookupName(const absl::string_view cxx_type_name) {
     constexpr absl::string_view kCxxSep = "::";
     constexpr absl::string_view kNameSep = ".";
@@ -345,6 +249,12 @@ class FunctionRegistry {
   }
 };
 
+/**
+ * @brief A global factory registry.
+ *
+ * @tparam R The return type of the functions in the registry.
+ * @tparam Args The argument types of the functions in the registry.
+ */
 template <typename R, typename... Args>
 class GlobalFactoryRegistry {
   using Functions = FunctionRegistry<R, Args...>;

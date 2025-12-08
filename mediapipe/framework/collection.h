@@ -38,20 +38,29 @@
 namespace mediapipe {
 namespace internal {
 
-// A class to handle errors that occur in Collection.  For most
-// collections, these errors should be fatal.  However, for a collection
-// more like PacketTypeSet, the errors should be deferred and handled
-// later.
-//
-// This class is thread compatible.
+/**
+ * @brief A class to handle errors that occur in Collection.
+ *
+ * For most collections, these errors should be fatal. However, for a
+ * collection more like PacketTypeSet, the errors should be deferred and
+ * handled later.
+ *
+ * This class is thread compatible.
+ *
+ * @tparam T The type of the objects in the collection.
+ */
 template <typename T>
 struct CollectionErrorHandlerFatal {
-  // An error occurred during object lookup for the provided tag and
-  // index.  The returned object reference will be provided instead.
-  //
-  // Since there isn't any state and we're not returning anything, we
-  // get away with only one version of this function (which is const
-  // but returns a non-const reference).
+  /**
+   * @brief An error occurred during object lookup for the provided tag and
+   * index.
+   *
+   * The returned object reference will be provided instead.
+   *
+   * @param tag The tag of the object.
+   * @param index The index of the object.
+   * @return A reference to the fallback object.
+   */
   T& GetFallback(const absl::string_view tag, int index) const {
     ABSL_LOG(FATAL) << "Failed to get tag \"" << tag << "\" index " << index;
     std::abort();
@@ -60,17 +69,23 @@ struct CollectionErrorHandlerFatal {
 
 enum class CollectionStorage { kStoreValue = 0, kStorePointer };
 
-// A collection of objects of type T.
-//
-// If storage == kStorePointer then T* will be stored instead of T, but
-// the accessor functions will still return T types.  The T objects must
-// be owned elsewhere and remain alive as long as the collection is used.
-// To set the pointers use the GetPtr() function.
-//
-// The ErrorHandler object allows errors to be deferred to a later time.
-//
-// This class is thread compatible as long as the ErrorHandler object is also
-// thread compatible.
+/**
+ * @brief A collection of objects of type T.
+ *
+ * If storage == kStorePointer then T* will be stored instead of T, but
+ * the accessor functions will still return T types. The T objects must
+ * be owned elsewhere and remain alive as long as the collection is used.
+ * To set the pointers use the GetPtr() function.
+ *
+ * The ErrorHandler object allows errors to be deferred to a later time.
+ *
+ * This class is thread compatible as long as the ErrorHandler object is also
+ * thread compatible.
+ *
+ * @tparam T The type of the objects in the collection.
+ * @tparam storage The storage type of the collection.
+ * @tparam ErrorHandler The error handler for the collection.
+ */
 template <typename T,
           CollectionStorage storage = CollectionStorage::kStoreValue,
           typename ErrorHandler = CollectionErrorHandlerFatal<T>>
@@ -106,138 +121,183 @@ class Collection {
   Collection() = delete;
   Collection(const Collection&) = delete;
   Collection& operator=(const Collection&) = delete;
-  // Makes a Collection using the given TagMap (which should be shared
-  // between collections).
-  // Refer to mediapipe::tool::CreateTagMap for examples of how to construct a
-  // collection from a vector of "TAG:<index>:name" strings, or from an integer
-  // number of indexes, etc.
+
+  /**
+   * @brief Makes a Collection using the given TagMap.
+   * @param tag_map The TagMap to use.
+   */
   explicit Collection(std::shared_ptr<tool::TagMap> tag_map);
-  // Makes a Collection using the information in the TagAndNameInfo.
+
+  /**
+   * @brief Makes a Collection using the information in the TagAndNameInfo.
+   * @param info The TagAndNameInfo to use.
+   */
   ABSL_DEPRECATED("Use Collection(tool::TagMap)")
   explicit Collection(const tool::TagAndNameInfo& info);
-  // Convenience constructor which initializes a collection to use
-  // indexes and have num_entries inputs.
+
+  /**
+   * @brief Convenience constructor which initializes a collection to use
+   * indexes and have num_entries inputs.
+   * @param num_entries The number of entries.
+   */
   ABSL_DEPRECATED("Use Collection(tool::TagMap)")
   explicit Collection(int num_entries);
-  // Convenience constructor which initializes a collection to use tags
-  // with the given names.
-  // Note: initializer_list constructor should not be marked explicit.
+
+  /**
+   * @brief Convenience constructor which initializes a collection to use tags
+   * with the given names.
+   * @param tag_names The names of the tags.
+   */
   ABSL_DEPRECATED("Use Collection(tool::TagMap)")
   Collection(const std::initializer_list<std::string>& tag_names);
 
-  // Access the data at a given CollectionItemId.  This is the most efficient
-  // way to access data within the collection.
-  //
-  // Do not assume that Index(2) == Get(collection.TagMap()->BeginId() + 2).
+  /**
+   * @brief Access the data at a given CollectionItemId.
+   * @param id The ID of the item to access.
+   * @return A reference to the item.
+   */
   value_type& Get(CollectionItemId id);
   const value_type& Get(CollectionItemId id) const;
 
-  // Convenience functions.
+  /**
+   * @brief Convenience functions.
+   * @param tag The tag of the item to access.
+   * @param index The index of the item to access.
+   * @return A reference to the item.
+   */
   value_type& Get(absl::string_view tag, int index);
   const value_type& Get(absl::string_view tag, int index) const;
 
-  // Equivalent to Get("", index);
+  /**
+   * @brief Equivalent to Get("", index);
+   * @param index The index of the item to access.
+   * @return A reference to the item.
+   */
   value_type& Index(int index);
   const value_type& Index(int index) const;
 
-  // Equivalent to Get(tag, 0);
+  /**
+   * @brief Equivalent to Get(tag, 0);
+   * @param tag The tag of the item to access.
+   * @return A reference to the item.
+   */
   value_type& Tag(absl::string_view tag);
   const value_type& Tag(absl::string_view tag) const;
 
-  // These functions only exist for collections with storage ==
-  // kStorePointer.  GetPtr returns the stored ptr value rather than
-  // the value_type.  The non-const version returns a reference so that
-  // the pointer can be set.
+  /**
+   * @brief These functions only exist for collections with storage ==
+   * kStorePointer.
+   * @param id The ID of the item to access.
+   * @return The stored ptr value rather than the value_type.
+   */
   value_type*& GetPtr(CollectionItemId id);
-  // Const version returns a pointer to a const value (a const-ref to
-  // a pointer wouldn't be useful in this context).
   const value_type* GetPtr(CollectionItemId id) const;
 
-  // Returns true if the collection has a tag other than "".
-  // TODO Deprecate and remove this function.
+  /**
+   * @brief Returns true if the collection has a tag other than "".
+   * @return True if the collection has a tag other than "".
+   */
   bool UsesTags() const;
 
-  // Returns a description of the collection.
+  /**
+   * @brief Returns a description of the collection.
+   * @return A description of the collection.
+   */
   std::string DebugString() const;
 
-  // Return the tag_map.
+  /**
+   * @brief Return the tag_map.
+   * @return The tag_map.
+   */
   const std::shared_ptr<tool::TagMap>& TagMap() const;
 
-  // Iteration functions for use of the collection in a range based
-  // for loop.  The items are provided in sorted tag order with indexes
-  // sequential within tags.
+  /**
+   * @brief Iteration functions for use of the collection in a range based
+   * for loop.
+   * @return An iterator to the beginning of the collection.
+   */
   iterator begin();
   iterator end();
   const_iterator begin() const;
   const_iterator end() const;
 
-  // Returns the error handler object.
+  /**
+   * @brief Returns the error handler object.
+   * @return The error handler object.
+   */
   const ErrorHandler& GetErrorHandler() const { return error_handler_; }
 
-  ////////////////////////////////////////
-  // The remaining public functions directly call their equivalent
-  // in tool::TagMap.  They are guaranteed to be equivalent for any
-  // Collection initialized using an equivalent tool::TagMap.
-  ////////////////////////////////////////
-
-  // Returns true if the provided tag is available (not necessarily set yet).
+  /**
+   * @brief Returns true if the provided tag is available.
+   * @param tag The tag to check.
+   * @return True if the provided tag is available.
+   */
   bool HasTag(const absl::string_view tag) const {
     return tag_map_->HasTag(tag);
   }
 
-  // Returns the number of entries in this collection.
+  /**
+   * @brief Returns the number of entries in this collection.
+   * @return The number of entries in this collection.
+   */
   int NumEntries() const { return tag_map_->NumEntries(); }
 
-  // Returns the number of entries with the provided tag.
+  /**
+   * @brief Returns the number of entries with the provided tag.
+   * @param tag The tag to check.
+   * @return The number of entries with the provided tag.
+   */
   int NumEntries(const absl::string_view tag) const {
     return tag_map_->NumEntries(tag);
   }
 
-  // Get the id for the tag and index.  This id is guaranteed valid for
-  // any Collection which was initialized with an equivalent tool::TagMap.
-  // If the tag or index are invalid then an invalid CollectionItemId
-  // is returned (with id.IsValid() == false).
-  //
-  // The id for indexes within the same tag are guaranteed to
-  // be sequential.  Meaning, if tag "BLAH" has 3 indexes, then
-  // ++GetId("BLAH", 1) == GetId("BLAH", 2)
-  // However, be careful in using this fact, as it circumvents the
-  // validity checks in GetId() (i.e. ++GetId("BLAH", 2) looks like it
-  // is valid, while GetId("BLAH", 3) is not valid).
+  /**
+   * @brief Get the id for the tag and index.
+   * @param tag The tag of the item.
+   * @param index The index of the item.
+   * @return The id for the tag and index.
+   */
   CollectionItemId GetId(const absl::string_view tag, int index) const {
     return tag_map_->GetId(tag, index);
   }
 
-  // Returns the names of the tags in this collection.
+  /**
+   * @brief Returns the names of the tags in this collection.
+   * @return The names of the tags in this collection.
+   */
   std::set<std::string> GetTags() const { return tag_map_->GetTags(); }
 
-  // Get a tag and index for the specified id.  If the id is not valid,
-  // then {"", -1} will be returned.
+  /**
+   * @brief Get a tag and index for the specified id.
+   * @param id The id of the item.
+   * @return A pair of the tag and index.
+   */
   std::pair<std::string, int> TagAndIndexFromId(CollectionItemId id) const {
     return tag_map_->TagAndIndexFromId(id);
   }
 
-  // The CollectionItemId corresponding to the first element in the collection.
-  // Looping over all elements can be done as follows.
-  //   for (CollectionItemId id = collection.BeginId();
-  //        id < collection.EndId(); ++id) {
-  //   }
-  // However, if only one collection is involved, prefer using a range
-  // based for loop.
-  //   for (Packet packet : Inputs()) {
-  //   }
+  /**
+   * @brief The CollectionItemId corresponding to the first element in the
+   * collection.
+   * @return The CollectionItemId corresponding to the first element in the
+   * collection.
+   */
   CollectionItemId BeginId() const { return tag_map_->BeginId(); }
-  // The CollectionItemId corresponding to an element immediately after
-  // the last element of the collection.
+
+  /**
+   * @brief The CollectionItemId corresponding to an element immediately after
+   * the last element of the collection.
+   * @return The CollectionItemId corresponding to an element immediately after
+   * the last element of the collection.
+   */
   CollectionItemId EndId() const { return tag_map_->EndId(); }
 
-  // Same as BeginId()/EndId() but for only one tag.  If the tag doesn't
-  // exist then an invalid CollectionItemId is returned.  It is guaranteed
-  // that a loop constructed in this way will successfully not be entered
-  // for invalid tags.
-  //   for (CollectionItemId id = collection.BeginId(tag);
-  //        id < collection.EndId(tag); ++id) {
-  //   }
+  /**
+   * @brief Same as BeginId()/EndId() but for only one tag.
+   * @param tag The tag of the item.
+   * @return The CollectionItemId corresponding to the first element in the
+   * collection with the given tag.
+   */
   CollectionItemId BeginId(const absl::string_view tag) const {
     return tag_map_->BeginId(tag);
   }
@@ -245,7 +305,11 @@ class Collection {
     return tag_map_->EndId(tag);
   }
 
-  // Equal Collections contain equal mappings and equal elements.
+  /**
+   * @brief Equal Collections contain equal mappings and equal elements.
+   * @param other The other collection.
+   * @return True if the collections are equal.
+   */
   bool operator==(const Collection<T>& other) const {
     if (tag_map_->Mapping() != other.TagMap()->Mapping()) {
       return false;

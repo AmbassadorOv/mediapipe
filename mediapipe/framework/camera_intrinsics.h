@@ -15,19 +15,68 @@
 #ifndef MEDIAPIPE_FRAMEWORK_CAMERA_INTRINSICS_H_
 #define MEDIAPIPE_FRAMEWORK_CAMERA_INTRINSICS_H_
 
+/**
+ * @brief Holds the camera intrinsics parameters.
+ */
 class CameraIntrinsics {
  public:
+  /**
+   * @brief Constructor.
+   * @param fx The focal length in x.
+   * @param fy The focal length in y.
+   * @param cx The principal point in x.
+   * @param cy The principal point in y.
+   * @param width The image width.
+   * @param height The image height.
+   */
   CameraIntrinsics(float fx, float fy, float cx, float cy, float width,
                    float height)
       : fx_(fx), fy_(fy), cx_(cx), cy_(cy), width_(width), height_(height) {}
+
+  /**
+   * @brief Constructor.
+   * @param fx The focal length in x.
+   * @param fy The focal length in y.
+   * @param cx The principal point in x.
+   * @param cy The principal point in y.
+   */
   CameraIntrinsics(float fx, float fy, float cx, float cy)
       : CameraIntrinsics(fx, fy, cx, cy, -1, -1) {}
 
+  /**
+   * @brief Returns the focal length in x.
+   * @return The focal length in x.
+   */
   float fx() const { return fx_; }
+
+  /**
+   * @brief Returns the focal length in y.
+   * @return The focal length in y.
+   */
   float fy() const { return fy_; }
+
+  /**
+   * @brief Returns the principal point in x.
+   * @return The principal point in x.
+   */
   float cx() const { return cx_; }
+
+  /**
+   * @brief Returns the principal point in y.
+   * @return The principal point in y.
+   */
   float cy() const { return cy_; }
+
+  /**
+   * @brief Returns the image width.
+   * @return The image width.
+   */
   float width() const { return width_; }
+
+  /**
+   * @brief Returns the image height.
+   * @return The image height.
+   */
   float height() const { return height_; }
 
  private:

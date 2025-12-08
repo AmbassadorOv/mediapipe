@@ -11,8 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""MediaPipe Pose connections."""
+"""MediaPipe Pose connections.
 
+This module contains the connections for the Pose solution.
+"""
+
+# The connections for the pose landmarks.
 POSE_CONNECTIONS = frozenset([(0, 1), (1, 2), (2, 3), (3, 7), (0, 4), (4, 5),
                               (5, 6), (6, 8), (9, 10), (11, 12), (11, 13),
                               (13, 15), (15, 17), (15, 19), (15, 21), (17, 19),

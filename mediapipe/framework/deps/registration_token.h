@@ -19,55 +19,29 @@
 #include <vector>
 
 namespace mediapipe {
-// RegistrationToken is a generic class that represents a registration that
-// can be later undone, via a call to Unregister().
-//
-// It is generally a good idea for registration methods, such as
-// RegisterListener(X) to return ways to undo the registration (for instance if
-// X goes out of scope).
-// RegistrationToken is a good candidate as a return value for those methods.
-//
-// Example usage:
-//
-// RegistrationToken token = MyCancellableRegisterListener(foo);
-// ...
-// do something
-//
-// token.Unregister();
-//
-//
-// There is also a Unregister RAII helper below that automatically unregisters
-// a token when it goes out of scope:
-//
-// {
-//   Unregister unregisterer(MyCancellableRegisterListener(foo));
-//   ...
-//   do something
-//
-// }  // unregisterer goes out of scope, we are unregistered.
-//
-//
-// Implementation: tokens are generic, they just accept a std::function<void()>
-// that does the actual unregistration. It is up to each registration system to
-// pass the function that corresponds to their own implementation for
-// unregistering things.
-//
-// In that regard, tokens are basically a glorified unique_ptr<function>.
-// The main advantage is that they guarantee the function can be called only
-// once, and naming is also much clearer (Unregister versus operator()).
-//
-// Tokens are not copyable but they are movable, which reflects the fact that
-// there should only ever be one token in charge of a particular registration
-// at any time (else there could be confusion, who is in charge of
-// unregistering).
-//
-// This class is thread compatible.
+/**
+ * @brief A generic class that represents a registration that can be later
+ * undone, via a call to Unregister().
+ *
+ * It is generally a good idea for registration methods, such as
+ * RegisterListener(X) to return ways to undo the registration (for instance if
+ * X goes out of scope).
+ * RegistrationToken is a good candidate as a return value for those methods.
+ *
+ * This class is thread compatible.
+ */
 class RegistrationToken {
  public:
+  /**
+   * @brief Constructor.
+   * @param unregisterer A function that unregisters the registration.
+   */
   explicit RegistrationToken(std::function<void()> unregisterer);
 
-  // It is useful to have an empty constructor for when we want to declare a
-  // token, and assign it later.
+  /**
+   * @brief It is useful to have an empty constructor for when we want to
+   * declare a token, and assign it later.
+   */
   RegistrationToken() {}
 
   RegistrationToken(const RegistrationToken&) = delete;
@@ -76,24 +50,34 @@ class RegistrationToken {
   RegistrationToken(RegistrationToken&& rhs);
   RegistrationToken& operator=(RegistrationToken&& rhs);
 
-  // Unregisters the registration for which this token is in charge, and voids
-  // the token. It is safe to call this more than once, but further calls are
-  // guaranteed to be noop.
+  /**
+   * @brief Unregisters the registration for which this token is in charge, and
+   * voids the token. It is safe to call this more than once, but further calls
+   * are guaranteed to be noop.
+   */
   void Unregister();
 
-  // Returns a token whose Unregister() will Unregister() all <tokens>.
+  /**
+   * @brief Returns a token whose Unregister() will Unregister() all <tokens>.
+   * @param tokens The tokens to combine.
+   * @return A token that unregisters all the given tokens.
+   */
   static RegistrationToken Combine(std::vector<RegistrationToken> tokens);
 
  private:
   std::function<void()> unregister_function_ = nullptr;
 };
 
-// RAII class for registration tokens: it calls Unregister() when it goes out
-// of scope.
+/**
+ * @brief RAII class for registration tokens: it calls Unregister() when it
+ * goes out of scope.
+ */
 class Unregister {
  public:
-  // Useful to have an empty constructor for when we want to assign it later.
-  // The default is an empty token that does nothing.
+  /**
+   * @brief Useful to have an empty constructor for when we want to assign it
+   * later. The default is an empty token that does nothing.
+   */
   Unregister() : token_() {}
   explicit Unregister(RegistrationToken token);
   ~Unregister();
@@ -104,9 +88,12 @@ class Unregister {
   Unregister(Unregister&& rhs);
   Unregister& operator=(Unregister&& rhs);
 
-  // Similar to unique_ptr.reset() and the likes: this will unregister the
-  // current token if any, and then assume registration ownership of this new
-  // <token>.
+  /**
+   * @brief Similar to unique_ptr.reset() and the likes: this will unregister
+   * the current token if any, and then assume registration ownership of this
+   * new <token>.
+   * @param token The new token to own.
+   */
   void Reset(RegistrationToken token = RegistrationToken());
 
  private:

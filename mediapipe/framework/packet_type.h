@@ -30,7 +30,7 @@
 #include "absl/strings/string_view.h"
 #include "absl/types/span.h"
 #include "mediapipe/framework/collection.h"
-#include "mediapipe/framework/deps/no_destructor.h"
+#include "mediapipi/framework/deps/no_destructor.h"
 #include "mediapipe/framework/packet.h"
 #include "mediapipe/framework/packet_set.h"
 #include "mediapipe/framework/port/status.h"
@@ -40,81 +40,132 @@
 
 namespace mediapipe {
 
-// Encapsulates the type and description of an input stream, output
-// stream, or input side packet.  The type to expect is set with Set<type>()
-// and a packet is validated with Validate().  The PacketType can be
-// set to indicate the same type as some other PacketType.
+/**
+ * @brief Encapsulates the type and description of an input stream, output
+ * stream, or input side packet.
+ */
 class PacketType {
  public:
-  // Creates an uninitialized PacketType.
+  /**
+   * @brief Creates an uninitialized PacketType.
+   */
   PacketType() = default;
 
   // PacketType can be passed by value.
   PacketType(const PacketType&) = default;
   PacketType& operator=(const PacketType&) = default;
 
-  // False for a PacketType that has not had any Set*() function called.
+  /**
+   * @brief False for a PacketType that has not had any Set*() function called.
+   * @return False for a PacketType that has not had any Set*() function called.
+   */
   bool IsInitialized() const;
 
-  // The following "Set*" functions initialize the PacketType.  They can
-  // be called any number of times; the PacketType is initialized to
-  // whatever the last call is.
-
-  // Sets the packet type to accept the provided type.
+  /**
+   * @brief Sets the packet type to accept the provided type.
+   * @tparam T The type to accept.
+   * @return A reference to this PacketType.
+   */
   template <typename T>
   PacketType& Set();
-  // Sets the packet type to accept packets of any type.  If an input or
-  // output stream is set to this type then the framework tries to infer
-  // the stream type based on the packet types of other Calculators.
-  // Specifically, using SetAny() still means that the stream has a type
-  // but this particular calculator just doesn't care what it is.
+
+  /**
+   * @brief Sets the packet type to accept packets of any type.
+   * @return A reference to this PacketType.
+   */
   PacketType& SetAny();
-  // Sets the packet type to accept any of the provided types.
+
+  /**
+   * @brief Sets the packet type to accept any of the provided types.
+   * @tparam T The types to accept.
+   * @return A reference to this PacketType.
+   */
   template <typename... T>
   PacketType& SetOneOf();
-  // Sets the packet type to not accept any packets.
+
+  /**
+   * @brief Sets the packet type to not accept any packets.
+   * @return A reference to this PacketType.
+   */
   PacketType& SetNone();
-  // Sets the PacketType to be the same as type.  This actually stores
-  // the pointer to the other PacketType but does not acquire ownership.
-  // "type" must outlive this object.
+
+  /**
+   * @brief Sets the PacketType to be the same as type.
+   * @param type The PacketType to be the same as.
+   * @return A reference to this PacketType.
+   */
   PacketType& SetSameAs(const PacketType* type);
-  // Marks this port as optional.
+
+  /**
+   * @brief Marks this port as optional.
+   * @return A reference to this PacketType.
+   */
   PacketType& Optional();
 
-  // Returns a pointer to the root PacketType of the "same as" equivalence
-  // class.
+  /**
+   * @brief Returns a pointer to the root PacketType of the "same as"
+   * equivalence class.
+   * @return A pointer to the root PacketType.
+   */
   const PacketType* GetSameAs() const;
   PacketType* GetSameAs();
-  // Returns true if this PacketType allows anything.
+
+  /**
+   * @brief Returns true if this PacketType allows anything.
+   * @return True if this PacketType allows anything.
+   */
   bool IsAny() const;
-  // Returns true if this PacketType allows nothing.
+
+  /**
+   * @brief Returns true if this PacketType allows nothing.
+   * @return True if this PacketType allows nothing.
+   */
   bool IsNone() const;
-  // Returns true if this PacketType allows a set of types.
+
+  /**
+   * @brief Returns true if this PacketType allows a set of types.
+   * @return True if this PacketType allows a set of types.
+   */
   bool IsOneOf() const;
-  // Returns true if this PacketType allows one specific type.
+
+  /**
+   * @brief Returns true if this PacketType allows one specific type.
+   * @return True if this PacketType allows one specific type.
+   */
   bool IsExactType() const;
-  // Returns true if this port has been marked as optional.
+
+  /**
+   * @brief Returns true if this port has been marked as optional.
+   * @return True if this port has been marked as optional.
+   */
   bool IsOptional() const { return optional_; }
 
-  // Returns true iff this and other are consistent, meaning they do
-  // not expect different types.  IsAny() is consistent with anything.
-  // IsNone() is only consistent with IsNone() and IsAny().
-  // Note: this is definied as a symmetric relationship, but within the
-  // framework, it is consistently invoked as:
-  //   input_port_type.IsConsistentWith(connected_output_port_type)
-  // TODO: consider making this explicitly directional, and
-  // sharing some logic with the packet validation check.
+  /**
+   * @brief Returns true iff this and other are consistent, meaning they do
+   * not expect different types.
+   * @param other The other PacketType.
+   * @return True iff this and other are consistent.
+   */
   bool IsConsistentWith(const PacketType& other) const;
 
-  // Returns OK if the packet contains an object of the appropriate type.
+  /**
+   * @brief Returns OK if the packet contains an object of the appropriate type.
+   * @param packet The packet to validate.
+   * @return OK if the packet contains an object of the appropriate type.
+   */
   absl::Status Validate(const Packet& packet) const;
 
-  // Returns a pointer to the Registered type name, or nullptr if the type
-  // is not registered.  Do not use this for validation, use Validate()
-  // instead.
+  /**
+   * @brief Returns a pointer to the Registered type name, or nullptr if the
+   * type is not registered.
+   * @return A pointer to the Registered type name.
+   */
   const std::string* RegisteredTypeName() const;
-  // Returns the type name.  Do not use this for validation, use
-  // Validate() instead.
+
+  /**
+   * @brief Returns the type name.
+   * @return The type name.
+   */
   std::string DebugTypeName() const;
 
  private:
@@ -151,15 +202,18 @@ class PacketType {
   bool optional_ = false;
 };
 
-// An error handler class which allows a PacketTypeSet to return valid
-// results while deferring errors.
-//
-// This class is thread compatible.
+/**
+ * @brief An error handler class which allows a PacketTypeSet to return valid
+ * results while deferring errors.
+ */
 class PacketTypeSetErrorHandler {
  public:
-  // Returns a usable PacketType.  A different PacketType object is
-  // returned for each different invalid location and the same object
-  // is returned for multiple accesses to the same invalid location.
+  /**
+   * @brief Returns a usable PacketType.
+   * @param tag The tag of the PacketType.
+   * @param index The index of the PacketType.
+   * @return A usable PacketType.
+   */
   PacketType& GetFallback(const absl::string_view tag, int index) {
     if (!missing_) {
       missing_ = absl::make_unique<Missing>();
@@ -169,19 +223,30 @@ class PacketTypeSetErrorHandler {
     return missing_->entries[key];
   }
 
-  // In the const setting produce a FATAL error.
+  /**
+   * @brief In the const setting produce a FATAL error.
+   * @param tag The tag of the PacketType.
+   * @param index The index of the PacketType.
+   * @return A usable PacketType.
+   */
   const PacketType& GetFallback(const absl::string_view tag, int index) const {
     ABSL_LOG(FATAL) << "Failed to get tag \"" << tag << "\" index " << index
                     << ".  Unable to defer error due to const specifier.";
     std::abort();
   }
 
-  // Returns true if a (deferred) error has been recorded by the
-  // PacketTypeSet.
+  /**
+   * @brief Returns true if a (deferred) error has been recorded by the
+   * PacketTypeSet.
+   * @return True if a (deferred) error has been recorded by the
+   * PacketTypeSet.
+   */
   bool HasError() const { return missing_ != nullptr; }
 
-  // Get the error messages that have been deferred.
-  // This function can only be called if HasError() is true.
+  /**
+   * @brief Get the error messages that have been deferred.
+   * @return The error messages that have been deferred.
+   */
   const std::vector<std::string>& ErrorMessages() const {
     ABSL_CHECK(missing_) << "ErrorMessages() can only be called if errors have "
                             "occurred.  Call HasError() before calling this "
@@ -217,44 +282,28 @@ class PacketTypeSetErrorHandler {
   std::unique_ptr<Missing> missing_;
 };
 
-// A collection of PacketTypes.  The types are either retrieved by index
-// or by tag.  The calculator must set a type for every input stream and
-// input side packet that it accepts and every output stream it produces.
-// Every (non-const) function in this class always returns valid values
-// that can be used directly without error checking.  If the types don't
-// match what the user provided then an error will be triggered later
-// (but the program will not crash).
-//
-// For example, a calculator can just call
-//   inputs->Tag("VIDEO").Set<ImageFrame>("Annotated Video Frames.");
-// Without checking that "VIDEO" is a valid tag.
-//
-// Similarly if the following is specified:
-//   inputs->Index(0).Set<int>("Some Integer.");
-//   inputs->Index(1).Set<std::string>("Some String.");
-//   inputs->Index(2).Set<float>("Some Float.");
-// then it is not necessary to check that NumEntries() == 3. An error
-// is triggered if there aren't exactly 3 inputs or they don't have the
-// proper types.
-//
-// For a const PacketTypeSet, invalid access is a fatal error.
-//
-// This class is thread compatible.
+/**
+ * @brief A collection of PacketTypes.
+ */
 using PacketTypeSet =
     internal::Collection<PacketType, internal::CollectionStorage::kStoreValue,
                          PacketTypeSetErrorHandler>;
 
-// Returns OK if the packets in the PacketSet are of the appropriate type.
-// packet_type_set must be valid before this is called (but packet_set
-// may be in any state).
+/**
+ * @brief Returns OK if the packets in the PacketSet are of the appropriate
+ * type.
+ * @param packet_type_set The PacketTypeSet to validate against.
+ * @param packet_set The PacketSet to validate.
+ * @return OK if the packets in the PacketSet are of the appropriate type.
+ */
 absl::Status ValidatePacketSet(const PacketTypeSet& packet_type_set,
                                const PacketSet& packet_set);
 
-// Validates that the PacketTypeSet was initialized properly.
-// An error is returned if
-// 1) Tag() or Index() is called with an invalid argument (however,
-//    a valid PacketType is still returned by the function).
-// 2) Any PacketType is not initialized.
+/**
+ * @brief Validates that the PacketTypeSet was initialized properly.
+ * @param packet_type_set The PacketTypeSet to validate.
+ * @return OK if the PacketTypeSet was initialized properly.
+ */
 absl::Status ValidatePacketTypeSet(const PacketTypeSet& packet_type_set);
 
 // Templated function definitions.

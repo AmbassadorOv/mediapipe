@@ -36,112 +36,183 @@
 
 namespace mediapipe {
 
-// CalculatorContract contains the expectations and properties of a Node
-// object, such as the expected packet types of input and output streams and
-// input and output side packets.
-//
-// Setters and getters are available for specifying an InputStreamHandler and
-// it's options from inside a calculator's GetContract() method. Ex:
-//  cc->SetInputStreamHandler("FixedSizeInputStreamHandler");
-//  MediaPipeOptions options;
-//  options.MutableExtension(FixedSizeInputStreamHandlerOptions::ext)
-//      ->set_fixed_min_size(2);
-//  cc->SetInputStreamHandlerOptions(options);
-//
+/**
+ * @brief Contains the expectations and properties of a Node object.
+ *
+ * This includes the expected packet types of input and output streams and
+ * input and output side packets.
+ */
 class CalculatorContract {
  public:
+  /**
+   * @brief Initializes the contract from a calculator node config.
+   * @param node The calculator node config.
+   * @return absl::Status OkStatus() on success, any other status on failure.
+   */
   absl::Status Initialize(const CalculatorGraphConfig::Node& node);
+
+  /**
+   * @brief Initializes the contract from a packet generator config.
+   * @param node The packet generator config.
+   * @param package The package name.
+   * @return absl::Status OkStatus() on success, any other status on failure.
+   */
   absl::Status Initialize(const PacketGeneratorConfig& node,
                           const std::string& package);
+
+  /**
+   * @brief Initializes the contract from a status handler config.
+   * @param node The status handler config.
+   * @return absl::Status OkStatus() on success, any other status on failure.
+   */
   absl::Status Initialize(const StatusHandlerConfig& node);
+
+  /**
+   * @brief Sets the name of the node.
+   * @param node_name The name of the node.
+   */
   void SetNodeName(const std::string& node_name) { node_name_ = node_name; }
 
-  // Returns the options given to this node.
+  /**
+   * @brief Returns the options given to this node.
+   * @return The options given to this node.
+   */
   const CalculatorOptions& Options() const { return node_config_->options(); }
 
-  // Returns the name given to this node.
+  /**
+   * @brief Returns the name given to this node.
+   * @return The name given to this node.
+   */
   const std::string& GetNodeName() const { return node_name_; }
 
-  // Returns the maximum number of invocations that can be executed in parallel.
+  /**
+   * @brief Returns the maximum number of invocations that can be executed in
+   * parallel.
+   * @return The maximum number of invocations that can be executed in
+   * parallel.
+   */
   int GetMaxInFlight() const {
     return max_in_flight_ == 0 ? 1 : max_in_flight_;
   }
 
-  // Returns the options given to this calculator.  Template argument T must
-  // be the type of the protobuf extension message or the protobuf::Any
-  // message containing the options.
+  /**
+   * @brief Returns the options given to this calculator.
+   * @tparam T The type of the protobuf extension message or the protobuf::Any
+   * message containing the options.
+   * @return The options given to this calculator.
+   */
   template <class T>
   const T& Options() const {
     return options_.Get<T>();
   }
 
+  /**
+   * @brief Returns true if the calculator has options of the given type.
+   * @tparam T The type of the options.
+   * @return True if the calculator has options of the given type.
+   */
   template <class T>
   bool HasOptions() const {
     return options_.Has<T>();
   }
 
-  // Returns the PacketTypeSet for the input streams.
+  /**
+   * @brief Returns the PacketTypeSet for the input streams.
+   * @return The PacketTypeSet for the input streams.
+   */
   PacketTypeSet& Inputs() { return *inputs_; }
   const PacketTypeSet& Inputs() const { return *inputs_; }
 
-  // Returns the PacketTypeSet for the output streams.
+  /**
+   * @brief Returns the PacketTypeSet for the output streams.
+   * @return The PacketTypeSet for the output streams.
+   */
   PacketTypeSet& Outputs() { return *outputs_; }
   const PacketTypeSet& Outputs() const { return *outputs_; }
 
-  // Returns the PacketTypeSet for the input side packets.
+  /**
+   * @brief Returns the PacketTypeSet for the input side packets.
+   * @return The PacketTypeSet for the input side packets.
+   */
   PacketTypeSet& InputSidePackets() { return *input_side_packets_; }
   const PacketTypeSet& InputSidePackets() const { return *input_side_packets_; }
 
-  // Returns the PacketTypeSet for the output side packets.
+  /**
+   * @brief Returns the PacketTypeSet for the output side packets.
+   * @return The PacketTypeSet for the output side packets.
+   */
   PacketTypeSet& OutputSidePackets() { return *output_side_packets_; }
   const PacketTypeSet& OutputSidePackets() const {
     return *output_side_packets_;
   }
 
-  // Specifies the preferred InputStreamHandler for this Node.
-  // If there is an InputStreamHandler specified in the graph (.pbtxt) for this
-  // Node, then the graph's InputStreamHandler will take priority.
+  /**
+   * @brief Specifies the preferred InputStreamHandler for this Node.
+   *
+   * If there is an InputStreamHandler specified in the graph (.pbtxt) for this
+   * Node, then the graph's InputStreamHandler will take priority.
+   * @param name The name of the InputStreamHandler.
+   */
   void SetInputStreamHandler(const std::string& name) {
     input_stream_handler_ = name;
   }
+
+  /**
+   * @brief Sets the options for the InputStreamHandler.
+   * @param options The options for the InputStreamHandler.
+   */
   void SetInputStreamHandlerOptions(const MediaPipeOptions& options) {
     input_stream_handler_options_ = options;
   }
 
-  // Returns the name of this Nodes's InputStreamHandler, or empty string if
-  // none is set.
+  /**
+   * @brief Returns the name of this Nodes's InputStreamHandler.
+   * @return The name of this Nodes's InputStreamHandler, or empty string if
+   * none is set.
+   */
   std::string GetInputStreamHandler() const { return input_stream_handler_; }
 
-  // Returns the MediaPipeOptions of this Node's InputStreamHandler, or empty
-  // options if none is set.
+  /**
+   * @brief Returns the MediaPipeOptions of this Node's InputStreamHandler.
+   * @return The MediaPipeOptions of this Node's InputStreamHandler, or empty
+   * options if none is set.
+   */
   MediaPipeOptions GetInputStreamHandlerOptions() const {
     return input_stream_handler_options_;
   }
 
-  // The next few methods are concerned with timestamp bound propagation
-  // (see scheduling_sync.md#input-policies). Every calculator that processes
-  // live inputs should specify either ProcessTimestampBounds or
-  // TimestampOffset.  Calculators that produce output at the same timestamp as
-  // the input, or with a fixed offset, should declare this fact using
-  // SetTimestampOffset.  Calculators that require custom timestamp bound
-  // calculations should use SetProcessTimestampBounds.
-
-  // When true, Process is called for every new timestamp bound, with or without
-  // new packets. A call to Process with only an input timestamp bound is
-  // normally used to compute a new output timestamp bound.
-  // NOTE: Also, when true, Process is called when input streams become done,
-  // which means, Process needs to handle input streams in "done" state.
-  // (Usually, by closing calculators' outputs where and when appropriate.)
+  /**
+   * @brief When true, Process is called for every new timestamp bound, with or
+   * without new packets.
+   *
+   * A call to Process with only an input timestamp bound is normally used to
+   * compute a new output timestamp bound.
+   * @param process_timestamps True to process timestamp bounds.
+   */
   void SetProcessTimestampBounds(bool process_timestamps) {
     process_timestamps_ = process_timestamps;
   }
+
+  /**
+   * @brief Returns true if Process is called for every new timestamp bound.
+   * @return True if Process is called for every new timestamp bound.
+   */
   bool GetProcessTimestampBounds() const { return process_timestamps_; }
 
-  // Specifies the maximum difference between input and output timestamps.
-  // When specified, the mediapipe framework automatically computes output
-  // timestamp bounds based on input timestamps.  The special value
-  // TimestampDiff::Unset disables the timestamp offset.
+  /**
+   * @brief Specifies the maximum difference between input and output
+   * timestamps.
+   *
+   * When specified, the mediapipe framework automatically computes output
+   * timestamp bounds based on input timestamps.
+   * @param offset The timestamp offset.
+   */
   void SetTimestampOffset(TimestampDiff offset) { timestamp_offset_ = offset; }
+
+  /**
+   * @brief Returns the timestamp offset.
+   * @return The timestamp offset.
+   */
   TimestampDiff GetTimestampOffset() const { return timestamp_offset_; }
 
   class GraphServiceRequest {
@@ -170,17 +241,21 @@ class CalculatorContract {
     bool optional_ = false;
   };
 
-  // Indicates specific `service` is required for graph execution.
-  //
-  // For services which allow default initialization:
-  // - `CalculatorGraph` will try to create corresponding service object by
-  //   default even if request is made optional
-  //   (`GraphServiceRequest::Optional()`).
-  //
-  // For services which disallow default initialization:
-  // - `CalculatorGraph` requires client to set corresponding service object and
-  //   otherwise fails, unless request is made optional
-  //   (`GraphServiceRequest::Optional()`).
+  /**
+   * @brief Indicates specific `service` is required for graph execution.
+   *
+   * For services which allow default initialization:
+   * - `CalculatorGraph` will try to create corresponding service object by
+   *   default even if request is made optional
+   *   (`GraphServiceRequest::Optional()`).
+   *
+   * For services which disallow default initialization:
+   * - `CalculatorGraph` requires client to set corresponding service object and
+   *   otherwise fails, unless request is made optional
+   *   (`GraphServiceRequest::Optional()`).
+   * @param service The service to use.
+   * @return A reference to the GraphServiceRequest.
+   */
   GraphServiceRequest& UseService(const GraphServiceBase& service) {
     auto it = service_requests_.emplace(service.key, service).first;
     return it->second;

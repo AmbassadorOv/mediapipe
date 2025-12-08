@@ -28,92 +28,98 @@
 
 namespace mediapipe {
 
+/**
+ * @brief An interface for producing output packets in a calculator.
+ */
 class OutputStream {
  public:
   OutputStream(const OutputStream&) = delete;
   OutputStream& operator=(const OutputStream&) = delete;
 
-  // Returns the name of the stream.
+  /**
+   * @brief Returns the name of the stream.
+   * @return The name of the stream.
+   */
   virtual const std::string& Name() const = 0;
 
-  // Adds a Packet to the output stream. It is CHECKed that the Packet contains
-  // the data and a timestamp. The most common way to create such a Packet is
-  // "Adopt(ptr).At(timestamp)".
-  //
-  // The timestamp of the packet must satisfy Timestamp::IsAllowedInStream().
-  // If the scheduling policy considers packet timestamps when scheduling
-  // calculator nodes, packet timestamps must meet additional requirements:
-  // * The timestamp of the packet must be greater than those of the previously
-  //   added Packets, and not less than NextTimestampBound().
-  // * If an OutputStream contains a Packet with the timestamp
-  //   Timestamp::PreStream() or Timestamp::PostStream(), the packet must be
-  //   the only packet in the stream.
-  // Violation of any of these conditions causes a CHECK-failure.
-  //
-  // NOTE: AddPacket() cannot report errors via the return value. Instead of a
-  // CHECK-failure, a subclass of OutputStream should use a callback function
-  // to report errors.
+  /**
+   * @brief Adds a Packet to the output stream.
+   * @param packet The packet to add.
+   */
   virtual void AddPacket(const Packet& packet) = 0;
-  // Takes an rvalue reference of the packet and moves the packet to the output
-  // stream. This AddPacket variant has the exact same logic as the const
-  // lvalue reference version except the move behavior.
+
+  /**
+   * @brief Adds a Packet to the output stream.
+   * @param packet The packet to add.
+   */
   virtual void AddPacket(Packet&& packet) = 0;
 
-  // Syntactic sugar for a common way to add Packets.
+  /**
+   * @brief Syntactic sugar for a common way to add Packets.
+   * @tparam T The type of the data.
+   * @param ptr A pointer to the data.
+   * @param timestamp The timestamp of the packet.
+   */
   template <typename T>
   void Add(T* ptr, Timestamp timestamp) {
     AddPacket(Adopt(ptr).At(timestamp));
   }
 
-  // Indicates that the next output will arrive no earlier than a certain
-  // timestamp. Calling this method may save memory by not buffering more
-  // packets than needed. It is recommended that the Calculator implementation
-  // call this method whenever such a bound is available. The argument should
-  // either satisfy Timestamp::IsAllowedInStream() or be a value returned by
-  // Timestamp::NextAllowedInStream().
-  //
-  // Rather than calling SetNextTimestampBound(Timestamp::Max()), use
-  // Close() below.
+  /**
+   * @brief Indicates that the next output will arrive no earlier than a
+   * certain timestamp.
+   * @param timestamp The next timestamp bound.
+   */
   virtual void SetNextTimestampBound(Timestamp timestamp) = 0;
 
-  // Returns the next timestamp bound.
+  /**
+   * @brief Returns the next timestamp bound.
+   * @return The next timestamp bound.
+   */
   virtual Timestamp NextTimestampBound() const = 0;
 
-  // If a Calculator is guaranteed not to add any more Packets to an
-  // OutputStream but may continue processing, it SHOULD call Close()
-  // on a stream. An example of this is an audio/video decoder applied to
-  // a file containing no audio and thus producing no Packets in the audio
-  // output stream. If a downstream Calculator takes both the audio and
-  // the video streams as inputs, and the decoder doesn't call Close()
-  // on the audio OutputStream, then the framework will buffer all the
-  // videos frames while waiting for the possibility that an audio frame
-  // will still appear with an early timestamp.
+  /**
+   * @brief If a Calculator is guaranteed not to add any more Packets to an
+   * OutputStream but may continue processing, it SHOULD call Close()
+   * on a stream.
+   */
   virtual void Close() = 0;
 
-  // true iff the OutputStream is closed.
+  /**
+   * @brief true iff the OutputStream is closed.
+   * @return true iff the OutputStream is closed.
+   */
   virtual bool IsClosed() const = 0;
 
-  // Set the offset.  If set, this means any packet which gets output
-  // will have a timestamp of at least input_timestamp + offset.
-  // The offset may be negative.  May be called from Calculator::Open(),
-  // but not from Process() nor Close().
+  /**
+   * @brief Set the offset.
+   * @param offset The offset.
+   */
   virtual void SetOffset(TimestampDiff offset) = 0;
 
-  // Returns true iff SetOffset() has been called.
+  /**
+   * @brief Returns true iff SetOffset() has been called.
+   * @return true iff SetOffset() has been called.
+   */
   virtual bool OffsetEnabled() const = 0;
 
-  // Returns the offset set by the Calculator in the Open() method (returns 0
-  // if the offset hasn't been set).
+  /**
+   * @brief Returns the offset set by the Calculator in the Open() method.
+   * @return The offset.
+   */
   virtual TimestampDiff Offset() const = 0;
 
-  // Sets the header for this OutputStream. May be called from
-  // Calculator::Open(), but not from Process() nor Close(). This header will
-  // be accessible by downstream Calculators via InputStream::Header(). The
-  // header's timestamp must be unset.
+  /**
+   * @brief Sets the header for this OutputStream.
+   * @param packet The header packet.
+   */
   virtual void SetHeader(const Packet& packet) = 0;
 
-  // Returns the header set by the Calculator in the Open() method, or an
-  // empty Packet if none was set.
+  /**
+   * @brief Returns the header set by the Calculator in the Open() method, or
+   * an empty Packet if none was set.
+   * @return The header packet.
+   */
   virtual const Packet& Header() const = 0;
 
  protected:

@@ -21,13 +21,29 @@
 
 namespace mediapipe {
 
+/**
+ * @brief The abstract class of counter.
+ */
 class Counter {
  public:
   Counter() {}
   virtual ~Counter() {}
 
+  /**
+   * @brief Increments the counter by 1.
+   */
   virtual void Increment() = 0;
+
+  /**
+   * @brief Increments the counter by a given amount.
+   * @param amount The amount to increment by.
+   */
   virtual void IncrementBy(int amount) = 0;
+
+  /**
+   * @brief Gets the current value of the counter.
+   * @return The current value of the counter.
+   */
   virtual int64_t Get() = 0;
 };
 

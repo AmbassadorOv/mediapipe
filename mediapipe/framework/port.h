@@ -18,6 +18,12 @@
 #ifndef MEDIAPIPE_FRAMEWORK_PORT_H_
 #define MEDIAPIPE_FRAMEWORK_PORT_H_
 
+/**
+ * @file port.h
+ * @brief Defines symbols and methods related to portable portions of the
+ * framework.
+ */
+
 // Note: some defines, e.g. MEDIAPIPE_LITE, can only be set in the bazel rules.
 // For consistency, we now set MEDIAPIPE_MOBILE there too. However, for the sake
 // of projects that may want to build MediaPipe using alternative build systems,

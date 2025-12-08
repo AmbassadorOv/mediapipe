@@ -11,7 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""MediaPipe Face Detection."""
+"""MediaPipe Face Detection.
+
+This module contains the FaceDetection solution.
+"""
 
 import enum
 from typing import NamedTuple, Union
@@ -31,12 +34,15 @@ def get_key_point(
 ) -> Union[None, location_data_pb2.LocationData.RelativeKeypoint]:
   """A convenience method to return a face key point by the FaceKeyPoint type.
 
+  This function provides a simple way to access specific key points from a
+  detection object.
+
   Args:
     detection: A detection proto message that contains face key points.
     key_point_enum: A FaceKeyPoint type.
 
   Returns:
-    A RelativeKeypoint proto message.
+    A RelativeKeypoint proto message, or None if the detection is invalid.
   """
   if not detection or not detection.location_data:
     return None
@@ -44,7 +50,7 @@ def get_key_point(
 
 
 class FaceKeyPoint(enum.IntEnum):
-  """The enum type of the six face detection key points."""
+  """The enum type for the six face detection key points."""
   RIGHT_EYE = 0
   LEFT_EYE = 1
   NOSE_TIP = 2
@@ -99,7 +105,9 @@ class FaceDetection(SolutionBase):
 
     Returns:
       A NamedTuple object with a "detections" field that contains a list of the
-      detected face location data.
+      detected face location data. Each detection has a bounding box and 6
+      key points: right eye, left eye, nose tip, mouth center, right ear
+      tragion, and left ear tragion.
     """
 
     return super().process(input_data={'image': image})

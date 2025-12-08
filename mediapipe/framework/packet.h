@@ -71,25 +71,24 @@ absl::StatusOr<Packet> PacketFromDynamicProto(const std::string& type_name,
                                               const std::string& serialized);
 }  // namespace packet_internal
 
-// A generic container class which can hold data of any type.  The type of
-// the data is specified when accessing the data (using Packet::Get<T>()).
-//
-// The Packet is implemented as a reference-counted pointer.  This means
-// that copying Packets creates a fast, shallow copy.  Packets are
-// copyable, movable, and assignable.  Packets can be stored in STL
-// containers.  A Packet may optionally contain a timestamp.
-//
-// The preferred method of creating a Packet is with MakePacket<T>().
-// The Packet typically owns the object that it contains, but
-// PointToForeign allows a Packet to be constructed which does not
-// own its data.
-//
-// This class is thread compatible.
+/**
+ * @brief A generic container class which can hold data of any type.
+ *
+ * The type of the data is specified when accessing the data (using
+ * Packet::Get<T>()).
+ *
+ * The Packet is implemented as a reference-counted pointer. This means
+ * that copying Packets creates a fast, shallow copy. Packets are
+ * copyable, movable, and assignable. Packets can be stored in STL
+ * containers. A Packet may optionally contain a timestamp.
+ *
+ * This class is thread compatible.
+ */
 class Packet {
  public:
-  // Creates an empty Packet, for which IsEmpty()==true and
-  // Timestamp()==Timestamp::Unset(). Calling Get() on this Packet leads
-  // to CHECK-failure.
+  /**
+   * @brief Creates an empty Packet.
+   */
   Packet() = default;
 
   // Copy constructor and assignment operator.
@@ -101,48 +100,54 @@ class Packet {
   Packet(Packet&&);
   Packet& operator=(Packet&&);
 
-  // Returns a Packet that contains the same data as *this, and has the
-  // given timestamp. Does not modify *this.
+  /**
+   * @brief Returns a Packet that contains the same data as *this, and has the
+   * given timestamp.
+   * @param timestamp The timestamp to set.
+   * @return A Packet with the given timestamp.
+   */
   Packet At(class Timestamp timestamp) const&;
 
-  // The rvalue reference overload of Packet's member function
-  // Packet::At(class Timestamp). Moves *this to a new Packet and returns
-  // the new Packet with the given timestamp.
+  /**
+   * @brief The rvalue reference overload of Packet's member function
+   * Packet::At(class Timestamp).
+   * @param timestamp The timestamp to set.
+   * @return A Packet with the given timestamp.
+   */
   Packet At(class Timestamp timestamp) &&;
 
-  // Returns true iff the Packet has been created using the default
-  // constructor Packet(), or is a copy of such a Packet.
+  /**
+   * @brief Returns true iff the Packet has been created using the default
+   * constructor Packet(), or is a copy of such a Packet.
+   * @return True iff the Packet is empty.
+   */
   bool IsEmpty() const;
 
-  // Returns the reference to the object of typename T if it contains
-  // one, crashes otherwise. It is safe to concurrently call Get()
-  // on the same packet from multiple threads.
+  /**
+   * @brief Returns the reference to the object of typename T if it contains
+   * one, crashes otherwise.
+   * @tparam T The type of the object.
+   * @return The reference to the object.
+   */
   template <typename T>
   const T& Get() const;
 
-  // Returns a shared pointer to the object of typename T if it contains
-  // one, an error otherwise (if the packet is empty or of another type). It is
-  // safe to concurrently call Share() on the same packet from multiple threads.
+  /**
+   * @brief Returns a shared pointer to the object of typename T if it contains
+   * one, an error otherwise.
+   * @tparam T The type of the object.
+   * @return A shared pointer to the object.
+   */
   template <typename T>
   absl::StatusOr<std::shared_ptr<const T>> Share() const;
 
-  // DEPRECATED
-  //
-  // Transfers the ownership of holder's data to a unique pointer
-  // of the object if the packet is the sole owner of a non-foreign
-  // holder. Otherwise, returns error when the packet can't be consumed.
-  //
-  // --- WARNING ---
-  // Packet is thread-compatible and this member function is non-const. Hence,
-  // calling it requires exclusive access to the object - callers are
-  // responsible for ensuring that no other thread is doing anything with the
-  // packet.
-  //
-  // For example, if a node/calculator calls this function, then no other
-  // calculator should be processing the same packet. Nodes/calculators cannot
-  // enforce/guarantee this as they don't know of each other, which means graph
-  // must be written in a special way to account for that. It's error-prone and
-  // general recommendation is to avoid calling this function.
+  /**
+   * @brief Transfers the ownership of holder's data to a unique pointer
+   * of the object if the packet is the sole owner of a non-foreign
+   * holder.
+   * @tparam T The type of the object.
+   * @return A unique pointer to the object.
+   */
   template <typename T>
   ABSL_DEPRECATED(
       "Avoid Consume* functions usage as in most cases it's hard to ensure "
@@ -151,48 +156,15 @@ class Packet {
       "SharedPtrWithPacket instead to get a shared_ptr<T> if applicable.")
   absl::StatusOr<std::unique_ptr<T>> Consume();
 
-  // DEPRECATED
-  //
-  // Consumes the packet and transfers the ownership of the data to a
-  // unique pointer if the packet is the sole owner of a non-foreign
-  // holder. Otherwise, the unique pointer holds a copy of the original
-  // data. In either case, the original packet is set to empty. The
-  // function returns error when the packet can't be consumed or copied. If
-  // was_copied is not nullptr, it is set to indicate whether the packet
-  // data was copied.
-  //
-  // --- WARNING ---
-  // Packet is thread-compatible and this member function is non-const. Hence,
-  // calling it requires exclusive access to the object - callers are
-  // responsible for ensuring that no other thread is doing anything with the
-  // packet.
-  //
-  // For example, if a node/calculator calls this function, then no other
-  // calculator should be processing the same packet. Nodes/calculators cannot
-  // enforce/guarantee this as they don't know of each other, which means graph
-  // must be written in a special way to account for that. It's error-prone and
-  // general recommendation is to avoid calling this function.
-  //
-  // Example usage:
-  //   MP_ASSIGN_OR_RETURN(std::unique_ptr<Detection> detection,
-  //                    p.ConsumeOrCopy<Detection>());
-  //   // The unique_ptr type can be omitted with auto.
-  //   MP_ASSIGN_OR_RETURN(auto detection, p.ConsumeOrCopy<Detection>());
-  //   If you would like to crash on failure (prefer MP_ASSIGN_OR_RETURN):
-  //   auto detection = p.ConsumeOrCopy<Detection>().value();
-  //   // In functions which do not return absl::Status use an adaptor
-  //   // function as the third argument to MP_ASSIGN_OR_RETURN.  In tests,
-  //   // use an adaptor which returns void.
-  //   MP_ASSIGN_OR_RETURN(auto detection, p.ConsumeOrCopy<Detection>(),
-  //                    _.With([](const absl::Status& status) {
-  //                      MP_EXPECT_OK(status);
-  //                      // Use CHECK_OK to crash and report a usable line
-  //                      // number (which the value() alternative does not).
-  //                      // Include a return statement if the return value is
-  //                      // non-void.  For example: return 1;
-  //                    }));
-  //
-  // Version for non-arrays.
+  /**
+   * @brief Consumes the packet and transfers the ownership of the data to a
+   * unique pointer if the packet is the sole owner of a non-foreign
+   * holder.
+   * @tparam T The type of the object.
+   * @param was_copied A pointer to a boolean that will be set to true if the
+   * data was copied.
+   * @return A unique pointer to the object.
+   */
   template <typename T>
   ABSL_DEPRECATED(
       "Avoid Consume* functions usage as in most cases it's hard to ensure "
@@ -203,7 +175,13 @@ class Packet {
       bool* was_copied = nullptr,
       typename std::enable_if<!std::is_array<T>::value>::type* = nullptr);
 
-  // Version for bounded array.
+  /**
+   * @brief Version for bounded array.
+   * @tparam T The type of the object.
+   * @param was_copied A pointer to a boolean that will be set to true if the
+   * data was copied.
+   * @return A unique pointer to the object.
+   */
   template <typename T>
   ABSL_DEPRECATED(
       "Avoid Consume* functions usage as in most cases it's hard to ensure "
@@ -215,11 +193,13 @@ class Packet {
       typename std::enable_if<std::is_array<T>::value &&
                               std::extent<T>::value != 0>::type* = nullptr);
 
-  // DEPRECATED
-  //
-  // TODO: Support unbounded array after fixing the bug in holder's
-  // delete helper.
-  // Version for unbounded array.
+  /**
+   * @brief Version for unbounded array.
+   * @tparam T The type of the object.
+   * @param was_copied A pointer to a boolean that will be set to true if the
+   * data was copied.
+   * @return A unique pointer to the object.
+   */
   template <typename T>
   ABSL_DEPRECATED(
       "Avoid Consume* functions usage as in most cases it's hard to ensure "
@@ -231,44 +211,70 @@ class Packet {
       typename std::enable_if<std::is_array<T>::value &&
                               std::extent<T>::value == 0>::type* = nullptr);
 
-  // Returns the reference to type MessageLite data, if the underlying
-  // object type is protocol buffer, crashes otherwise.
+  /**
+   * @brief Returns the reference to type MessageLite data, if the underlying
+   * object type is protocol buffer, crashes otherwise.
+   * @return The reference to type MessageLite data.
+   */
   const proto_ns::MessageLite& GetProtoMessageLite() const;
 
-  // Returns a vector of pointers to MessageLite data, if the underlying
-  // object type is a vector of MessageLite data, returns an error otherwise.
-  // Note: This function is meant to be used internally within the MediaPipe
-  // framework only.
+  /**
+   * @brief Returns a vector of pointers to MessageLite data, if the underlying
+   * object type is a vector of MessageLite data, returns an error otherwise.
+   * @return A vector of pointers to MessageLite data.
+   */
   absl::StatusOr<std::vector<const proto_ns::MessageLite*>>
   GetVectorOfProtoMessageLitePtrs() const;
 
-  // Returns an error if the packet does not contain data of type T.
+  /**
+   * @brief Returns an error if the packet does not contain data of type T.
+   * @tparam T The type of the data.
+   * @return An error if the packet does not contain data of type T.
+   */
   template <typename T>
   absl::Status ValidateAsType() const {
     return ValidateAsType(kTypeId<T>);
   }
 
-  // Returns an error if the packet is not an instance of
-  // a protocol buffer message.
+  /**
+   * @brief Returns an error if the packet is not an instance of
+   * a protocol buffer message.
+   * @return An error if the packet is not an instance of
+   * a protocol buffer message.
+   */
   absl::Status ValidateAsProtoMessageLite() const;
 
-  // Get the type id for the underlying type stored in the Packet.
-  // Crashes if IsEmpty() == true.
+  /**
+   * @brief Get the type id for the underlying type stored in the Packet.
+   * @return The type id for the underlying type stored in the Packet.
+   */
   TypeId GetTypeId() const;
 
-  // Returns the timestamp.
+  /**
+   * @brief Returns the timestamp.
+   * @return The timestamp.
+   */
   class Timestamp Timestamp() const;
 
+  /**
+   * @brief Returns a debug string for the packet.
+   * @return A debug string for the packet.
+   */
   std::string DebugString() const;
   friend std::ostream& operator<<(std::ostream& stream, const Packet& p) {
     return stream << p.DebugString();
   }
 
-  // Returns the type name.  If the packet is empty or the type is not
-  // registered (with MEDIAPIPE_REGISTER_TYPE or companion macros) then
-  // the empty string is returned.
+  /**
+   * @brief Returns the type name.
+   * @return The type name.
+   */
   std::string RegisteredTypeName() const;
-  // Returns a string with the best guess at the type name.
+
+  /**
+   * @brief Returns a string with the best guess at the type name.
+   * @return A string with the best guess at the type name.
+   */
   std::string DebugTypeName() const;
 
  private:
@@ -295,33 +301,34 @@ class Packet {
 // Factory functions for creating Packets. Non-members as opposed to static
 // methods, to prevent users from mistakenly calling them on Packet instances.
 
-// Returns a Packet that adopts the object; the Packet assumes the ownership.
-// The timestamp of the returned Packet is Timestamp::Unset(). To set the
-// timestamp, the caller should do Adopt(...).At(...).
-//
-// Generally prefer MakePacket<T>().
+/**
+ * @brief Returns a Packet that adopts the object; the Packet assumes the
+ * ownership.
+ * @tparam T The type of the object.
+ * @param ptr A pointer to the object.
+ * @return A Packet that adopts the object.
+ */
 template <typename T>
 Packet Adopt(const T* ptr);
 
-// Returns a Packet that does not own its data. The data pointed to by *ptr
-// remains owned by the caller, who must ensure that it outlives not only the
-// returned Packet but also all of its copies.
-//
-// Optionally, `cleanup` object can be specified to invoke when all copies of
-// the packet are destroyed (can be used to capture the foreign owner if
-// possible and ensure the lifetime).
-//
-// The timestamp of the returned Packet is Timestamp::Unset(). To set the
-// timestamp, the caller should do PointToForeign(...).At(...).
+/**
+ * @brief Returns a Packet that does not own its data.
+ * @tparam T The type of the object.
+ * @param ptr A pointer to the object.
+ * @param cleanup A cleanup function.
+ * @return A Packet that does not own its data.
+ */
 template <typename T>
 Packet PointToForeign(const T* ptr,
                       absl::AnyInvocable<void()> cleanup = nullptr);
 
-// Adopts the data but places it in a std::unique_ptr inside the
-// resulting Packet, leaving the timestamp unset. This allows the
-// adopted data to be mutated, with the mutable data accessible as
-// packet.Get<std::unique_ptr<T>>().get(). GetFromUniquePtr below provides
-// a more syntactically-pleasing way of accomplishing that.
+/**
+ * @brief Adopts the data but places it in a std::unique_ptr inside the
+ * resulting Packet, leaving the timestamp unset.
+ * @tparam T The type of the object.
+ * @param ptr A pointer to the object.
+ * @return A Packet that adopts the data.
+ */
 template <typename T>
 Packet AdoptAsUniquePtr(T* ptr) {
   static_assert(
@@ -330,9 +337,10 @@ Packet AdoptAsUniquePtr(T* ptr) {
   return Adopt(new std::unique_ptr<T>(ptr));
 }
 
-// A SyncedPacket is a packet containing a reference to another packet, and the
-// reference can be updated.
-// SyncedPacket is thread-safe.
+/**
+ * @brief A SyncedPacket is a packet containing a reference to another packet,
+ * and the reference can be updated.
+ */
 class SyncedPacket {
  public:
   explicit SyncedPacket(const Packet& packet) : packet_(packet) {}
@@ -350,32 +358,27 @@ class SyncedPacket {
   Packet packet_;
 };
 
-// Adopt the data as SyncedPacket, so that the content of the packet can be
-// updated in a thread-safe way.
-// Usage:
-//   Packet synced_packet = AdoptAsSyncedPacket(new int(100));
-//   Packet value_packet =
-//       synced_packet.Get<std::unique_ptr<SyncedPacket>>()->Get();
-//   EXPECT_EQ(100, value_packet.Get<int>());
-//   // update the value.
-//   Packet new_value_packet = Adopt(new int(999));
-//   synced_packet.Get<std::unique_ptr<SyncedPacket>>()
-//       ->UpdatePacket(new_value_packet);
-//   Packet packet_new =
-//       synced_packet.Get<std::unique_ptr<SyncedPacket>>()->Get();
-//   EXPECT_EQ(999, packet_new.Get<int>());
-
+/**
+ * @brief Adopt the data as SyncedPacket, so that the content of the packet can
+ * be updated in a thread-safe way.
+ * @tparam T The type of the object.
+ * @param ptr A pointer to the object.
+ * @return A Packet that adopts the data as SyncedPacket.
+ */
 template <typename T>
 Packet AdoptAsSyncedPacket(const T* ptr) {
   Packet packet = Adopt(ptr);
   return AdoptAsUniquePtr(new SyncedPacket(packet));
 }
 
-// Create a packet containing an object of type T initialized with the
-// provided arguments. Similar to MakeUnique. Especially convenient for arrays,
-// since it ensures the packet gets the right type (see below).
-//
-// Version for scalars.
+/**
+ * @brief Create a packet containing an object of type T initialized with the
+ * provided arguments.
+ * @tparam T The type of the object.
+ * @tparam Args The types of the arguments.
+ * @param args The arguments.
+ * @return A Packet containing the object.
+ */
 template <typename T,
           typename std::enable_if<!std::is_array<T>::value>::type* = nullptr,
           typename... Args>
@@ -383,11 +386,13 @@ Packet MakePacket(Args&&... args) {  // NOLINT(build/c++11)
   return Adopt(new T(std::forward<Args>(args)...));
 }
 
-// Version for arrays. We have to use reinterpret_cast because new T[N]
-// returns a T* instead of a T(*)[N] (i.e. a pointer to the first element
-// instead of a pointer to the array itself - they have the same value, but
-// different types), which would prevent Adopt from seeing the array's type
-// if we did not have the cast.
+/**
+ * @brief Version for arrays.
+ * @tparam T The type of the object.
+ * @tparam Args The types of the arguments.
+ * @param args The arguments.
+ * @return A Packet containing the object.
+ */
 template <typename T,
           typename std::enable_if<std::is_array<T>::value>::type* = nullptr,
           typename... Args>
@@ -396,19 +401,24 @@ Packet MakePacket(Args&&... args) {  // NOLINT(build/c++11)
       new T{std::forward<typename std::remove_extent<T>::type>(args)...}));
 }
 
-// Returns a mutable pointer to the data in a unique_ptr in a packet. This
-// is useful in combination with AdoptAsUniquePtr.  The caller must
-// exercise caution when mutating the retrieved data, since the data
-// may be accessible from other locations.
+/**
+ * @brief Returns a mutable pointer to the data in a unique_ptr in a packet.
+ * @tparam T The type of the object.
+ * @param packet The packet.
+ * @return A mutable pointer to the data.
+ */
 template <typename T>
 T* GetFromUniquePtr(const Packet& packet) {
   return packet.Get<std::unique_ptr<T>>().get();
 }
 
-// Returns a shared_ptr to the payload of the packet which retains its object
-// through a copy of the packet.
-// Use std::const_pointer_cast if you need a shared_ptr<T>, but remember that
-// you must not change the payload if the packet has other owners.
+/**
+ * @brief Returns a shared_ptr to the payload of the packet which retains its
+ * object through a copy of the packet.
+ * @tparam T The type of the object.
+ * @param packet The packet.
+ * @return A shared_ptr to the payload of the packet.
+ */
 template <typename T>
 ABSL_DEPRECATED("Use Packet::Share<T>() instead.")
 std::shared_ptr<const T> SharedPtrWithPacket(const Packet& packet) {

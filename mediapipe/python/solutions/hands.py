@@ -12,7 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""MediaPipe Hands."""
+"""MediaPipe Hands.
+
+This module contains the Hands solution.
+"""
 
 import enum
 from typing import NamedTuple
@@ -141,13 +144,14 @@ class Hands(SolutionBase):
 
     Returns:
       A NamedTuple object with the following fields:
-        1) a "multi_hand_landmarks" field that contains the hand landmarks on
-           each detected hand.
-        2) a "multi_hand_world_landmarks" field that contains the hand landmarks
-           on each detected hand in real-world 3D coordinates that are in meters
-           with the origin at the hand's approximate geometric center.
-        3) a "multi_handedness" field that contains the handedness (left v.s.
-           right hand) of the detected hand.
+        1) "multi_hand_landmarks": A list of hand landmarks on each detected
+           hand. Each hand is represented as a list of 21 hand landmarks, with
+           x, y, and z coordinates.
+        2) "multi_hand_world_landmarks": A list of hand landmarks on each
+           detected hand in real-world 3D coordinates that are in meters with
+           the origin at the hand's approximate geometric center.
+        3) "multi_handedness": A list of handedness (left v.s. right hand) of
+           the detected hands.
     """
 
     return super().process(input_data={'image': image})

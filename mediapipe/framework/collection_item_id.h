@@ -23,20 +23,27 @@ namespace tool {
 class TagMap;
 }  // namespace tool
 
-// TagMap allows access to a collection using a tag and index value.
-// The underlying data in the collection is stored in a flat array.
-// CollectionItemId is the index into that array.  Although this type is
-// conceptually an int we don't allow implicit type conversion so as to
-// avoid confusion where a user accidentally forgets to query the TagMap
-// to get an actual CollectionItemId.
-// For example, accidentally using Inputs().Get(2) when Inputs().Index(2)
-// was meant will cause a type error.
+/**
+ * @brief Identifies an item in a collection.
+ *
+ * TagMap allows access to a collection using a tag and index value.
+ * The underlying data in the collection is stored in a flat array.
+ * CollectionItemId is the index into that array.  Although this type is
+ * conceptually an int we don't allow implicit type conversion so as to
+ * avoid confusion where a user accidentally forgets to query the TagMap
+ * to get an actual CollectionItemId.
+ */
 class CollectionItemId {
  public:
-  // Static function to return an invalid id.
+  /**
+   * @brief Static function to return an invalid id.
+   * @return An invalid id.
+   */
   static const CollectionItemId GetInvalid() { return CollectionItemId(); }
 
-  // Construct an invalid CollectionItemId.
+  /**
+   * @brief Construct an invalid CollectionItemId.
+   */
   constexpr CollectionItemId() : value_(-1) {}
 
   // Use the default copy constructor, assignment, and destructor.
@@ -44,8 +51,16 @@ class CollectionItemId {
   ~CollectionItemId() = default;
   CollectionItemId& operator=(const CollectionItemId&) = default;
 
+  /**
+   * @brief Returns true if the id is valid.
+   * @return True if the id is valid.
+   */
   bool IsValid() const { return value_ >= 0; }
-  // Accesses the raw value.
+
+  /**
+   * @brief Accesses the raw value.
+   * @return The raw value.
+   */
   constexpr int value() const { return value_; }
 
   // Unary operators.

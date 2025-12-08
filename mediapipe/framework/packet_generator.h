@@ -30,14 +30,13 @@
 
 namespace mediapipe {
 
-// Pure virtual base class for packet generators.  These classes take any
-// number of input side packet packets and produce some number of external
-// output packets.  Those packets then become input side packets to other
-// PacketGenerator's or to Calculators within the calculator graph.
-//
-// ***NOTE*** It is vital that the public interfaces for all classes
-// included in packets be thread safe if the packet is meant
-// to be used concurrently (e.g., with the PacketManager).
+/**
+ * @brief Pure virtual base class for packet generators.
+ *
+ * These classes take any number of input side packet packets and produce some
+ * number of external output packets. Those packets then become input side
+
+ */
 class PacketGenerator {
  public:
   PacketGenerator(const PacketGenerator&) = delete;
@@ -148,8 +147,9 @@ class StaticAccessToGeneratorTyped : public StaticAccessToGenerator {
 
 }  // namespace internal
 
-// Macro for registering PacketGenerators.  It actually just registers
-// the StaticAccessToGeneratorTyped class.
+/**
+ * @brief Macro for registering PacketGenerators.
+ */
 #define REGISTER_PACKET_GENERATOR(name)                     \
   REGISTER_FACTORY_FUNCTION_QUALIFIED(                      \
       mediapipe::internal::StaticAccessToGeneratorRegistry, \

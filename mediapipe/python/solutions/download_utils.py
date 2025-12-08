@@ -21,7 +21,15 @@ _GCS_URL_PREFIX = 'https://storage.googleapis.com/mediapipe-assets/'
 
 
 def download_oss_model(model_path: str):
-  """Downloads the oss model from Google Cloud Storage if it doesn't exist in the package."""
+  """Downloads a model from Google Cloud Storage if it doesn't exist.
+
+  Args:
+    model_path: The path to the model file.
+
+  Raises:
+    ConnectionError: If the model cannot be downloaded from Google Cloud
+      Storage.
+  """
 
   mp_root_path = os.sep.join(os.path.abspath(__file__).split(os.sep)[:-4])
   model_abspath = os.path.join(mp_root_path, model_path)

@@ -21,7 +21,17 @@
 
 #include "mediapipe/framework/calculator_base.h"
 
-// Macro for registering calculators.
+/**
+ * @file calculator_registry.h
+ * @brief This file defines the macro for registering calculators.
+ */
+
+/**
+ * @brief Macro for registering calculators.
+ *
+ * The registration is through a REGISTER_FACTORY_FUNCTION_QUALIFIED call, which
+ * registers a factory function for the calculator.
+ */
 #define REGISTER_CALCULATOR(name)                                       \
   REGISTER_FACTORY_FUNCTION_QUALIFIED(                                  \
       mediapipe::CalculatorBaseRegistry, calculator_registration, name, \

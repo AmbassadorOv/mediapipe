@@ -11,7 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""MediaPipe Selfie Segmentation."""
+"""MediaPipe Selfie Segmentation.
+
+This module contains the SelfieSegmentation solution.
+"""
 
 from typing import NamedTuple
 
@@ -70,7 +73,9 @@ class SelfieSegmentation(SolutionBase):
 
     Returns:
       A NamedTuple object with a "segmentation_mask" field that contains a float
-      type 2d np array representing the mask.
+      type 2d np array representing the mask. The values in the array are
+      between 0 and 1, where 1 indicates the pixel is part of the person and 0
+      indicates the pixel is part of the background.
     """
 
     return super().process(input_data={'image': image})

@@ -64,13 +64,16 @@ MEDIAPIPE_DEFINE_SAFE_INT_TYPE(TimestampBaseType, int64_t,
 
 class TimestampDiff;
 
-// A class which represents a timestamp in the calculator framework.
-// There are several special values which can only be created with the
-// static functions provided in this class.
+/**
+ * @brief A class which represents a timestamp in the calculator framework.
+ */
 class Timestamp {
  public:
   Timestamp();
-  // Construction of Timestamp() is explicit (TimestampDiff is not explicit).
+  /**
+   * @brief Constructor.
+   * @param timestamp The timestamp value.
+   */
   explicit Timestamp(int64_t timestamp);
   explicit Timestamp(TimestampBaseType timestamp);
 
@@ -80,39 +83,71 @@ class Timestamp {
 
   // Use the default copy constructor, assignment operator, and destructor.
 
-  // Get the underlying int64_t value being used.  This should generally be
-  // avoided, but may be necessary for things like serialization.
+  /**
+   * @brief Get the underlying int64_t value being used.
+   * @return The underlying int64_t value.
+   */
   int64_t Value() const { return timestamp_.value(); }
-  // Return the value in units of seconds (the underlying value is in
-  // microseconds).
+
+  /**
+   * @brief Return the value in units of seconds.
+   * @return The value in units of seconds.
+   */
   double Seconds() const { return Value() / kTimestampUnitsPerSecond; }
-  // Return the value in units of milliseconds (the underlying value is in
-  // microseconds).
+
+  /**
+   * @brief Return the value in units of milliseconds.
+   * @return The value in units of milliseconds.
+   */
   double Milliseconds() const {
     return Value() / kTimestampUnitsPerMillisecond;
   }
-  // Return the value in units of microseconds.  The underlying value is already
-  // in microseconds, but this function should be preferred over Value() in case
-  // the underlying representation changes.
+
+  /**
+   * @brief Return the value in units of microseconds.
+   * @return The value in units of microseconds.
+   */
   int64_t Microseconds() const { return Value(); }
-  // This provides a human readable string for the special values.
+
+  /**
+   * @brief This provides a human readable string for the special values.
+   * @return A human readable string.
+   */
   std::string DebugString() const;
 
-  // For use by framework. Clients or Calculator implementations should not call
-  // this.
+  /**
+   * @brief For use by framework. Clients or Calculator implementations should
+   * not call this.
+   * @param timestamp The timestamp value.
+   * @return A Timestamp object.
+   */
   static Timestamp CreateNoErrorChecking(int64_t timestamp);
 
-  // Create a timestamp from a seconds value.
+  /**
+   * @brief Create a timestamp from a seconds value.
+   * @param seconds The seconds value.
+   * @return A Timestamp object.
+   */
   static Timestamp FromSeconds(double seconds) {
     return Timestamp(
         TimestampBaseType{std::round(seconds * kTimestampUnitsPerSecond)});
   }
-  // Create a timestamp from a milliseconds value.
+
+  /**
+   * @brief Create a timestamp from a milliseconds value.
+   * @param milliseconds The milliseconds value.
+   * @return A Timestamp object.
+   */
   static Timestamp FromMilliseconds(double milliseconds) {
     return Timestamp(TimestampBaseType{
         std::round(milliseconds * kTimestampUnitsPerMillisecond)});
   }
-  // Create a timestamp from an integer microseconds value.
+
+  /**
+   * @brief Create a timestamp from an integer microseconds value.
+   * @param microseconds The microseconds value.
+   * @return A Timestamp object.
+   */
   static Timestamp FromMicroseconds(int64_t microseconds) {
     return Timestamp(TimestampBaseType{microseconds});
   }
@@ -127,29 +162,25 @@ class Timestamp {
   static Timestamp OneOverPostStream();
   static Timestamp Done();
 
-  // A special value is any of the values which cannot be constructed directly
-  // but must be constructed using the helper functions given above.
+  /**
+   * @brief A special value is any of the values which cannot be constructed
+   * directly but must be constructed using the helper functions given above.
+   * @return True if the timestamp is a special value.
+   */
   bool IsSpecialValue() const { return *this <= Min() || *this >= Max(); }
 
-  // A range value is anything between Min() and Max() (inclusive).
-  // Any number of packets with range values can be sent over a
-  // stream as long as they are sent in monotonically increasing order.
-  // IsRangeValue() isn't quite the opposite of IsSpecialValue() since it
-  // is valid to start a stream at Timestamp::Min() and continue until
-  // Timestamp::Max() (both of which are special values).  PreStream()
-  // and PostStream() are not considered a range value even though
-  // they can be sent over a stream (they are "summary" timestamps not
-  // "range" timestamps).
-  //
-  // Notice that arithmetic may only be performed if IsRangeValue()
-  // is true.  Arithmetic on Min and Max is valid but is almost certainly
-  // bad design.
+  /**
+   * @brief A range value is anything between Min() and Max() (inclusive).
+   * @return True if the timestamp is a range value.
+   */
   bool IsRangeValue() const { return *this >= Min() && *this <= Max(); }
 
-  // Returns true iff this can be the timestamp of a Packet in a
-  // stream.  Any number of RangeValue timestamps may be in a stream
-  // (in monotonically increasing order).  Also, exactly one PreStream,
-  // or one PostStream packet is allowed.
+  /**
+   * @brief Returns true iff this can be the timestamp of a Packet in a
+   * stream.
+   * @return True iff this can be the timestamp of a Packet in a
+   * stream.
+   */
   bool IsAllowedInStream() const {
     // This is a simplified expression for
     // IsRangeValue() or PreStream() or PostStream().
@@ -175,21 +206,9 @@ class Timestamp {
   bool operator>=(Timestamp other) const {
     return timestamp_ >= other.timestamp_;
   }
-  // Addition and subtraction of Timestamp and TimestampDiff values.
-  // Notice that subtracting two Timestamp values gives a TimestampDiff
-  // while adding a TimestampDiff to a Timestamp gives a Timestamp.
-  // Note that no special values are allowed to be the result of these
-  // operations.
-  //
-  // The addition or subtraction of a TimestampDiff to a Timestamp is clamped
-  // within the valid range of values [Timestamp::Min(), Timestamp::Max()].
-  //
-  // Not all operations are allowed, in particular, you cannot add two
-  // Timestamps, and you cannot subtract a Timestamp from a TimestampDiff.
   TimestampDiff operator-(Timestamp other) const;
   Timestamp operator+(TimestampDiff offset) const;
   Timestamp operator-(TimestampDiff offset) const;
-  // Unary negation of a Timestamp is not allowed.
 
   // Provided for convenience.
   Timestamp operator+=(TimestampDiff other);
@@ -199,53 +218,74 @@ class Timestamp {
   Timestamp operator++(int);
   Timestamp operator--(int);
 
-  // Returns the next timestamp in the range [Min .. Max], or
-  // OneOverPostStream() if no Packets may follow one with this timestamp.
-  // CHECKs that this->IsAllowedInStream().
+  /**
+   * @brief Returns the next timestamp in the range [Min .. Max].
+   * @return The next timestamp in the range [Min .. Max].
+   */
   Timestamp NextAllowedInStream() const;
 
-  // Returns true if there's a next timestamp in the range [Min .. Max] after
-  // this one.
+  /**
+   * @brief Returns true if there's a next timestamp in the range [Min .. Max]
+   * after this one.
+   * @return True if there's a next timestamp in the range [Min .. Max]
+   * after this one.
+   */
   bool HasNextAllowedInStream() const;
 
-  // Returns the previous timestamp in the range [Min .. Max], or
-  // Unstarted() if no Packets may preceed one with this timestamp.
+  /**
+   * @brief Returns the previous timestamp in the range [Min .. Max].
+   * @return The previous timestamp in the range [Min .. Max].
+   */
   Timestamp PreviousAllowedInStream() const;
 
  private:
   TimestampBaseType timestamp_;
 };
 
-// A class which represents the difference between two timestamps in the
-// calculator framework.
+/**
+ * @brief A class which represents the difference between two timestamps in the
+ * calculator framework.
+ */
 class TimestampDiff {
  public:
   TimestampDiff() : timestamp_(0) {}
-  // This constructor is not explicit.
+  /**
+   * @brief Constructor.
+   * @param timestamp The timestamp value.
+   */
   TimestampDiff(int64_t timestamp) : timestamp_(timestamp) {  // NOLINT
   }
-  // This constructor is not explicit.
   TimestampDiff(TimestampBaseType timestamp)  // NOLINT
       : timestamp_(timestamp) {}
 
   // Use the default copy constructor, assignment operator, and destructor.
 
-  // Get the underlying int64_t value being used.  This should generally be
-  // avoided, but may be necessary for things like serialization.
+  /**
+   * @brief Get the underlying int64_t value being used.
+   * @return The underlying int64_t value.
+   */
   int64_t Value() const { return timestamp_.value(); }
-  // Return the value in units of seconds (the underlying value is in
-  // microseconds).
+
+  /**
+   * @brief Return the value in units of seconds.
+   * @return The value in units of seconds.
+   */
   double Seconds() const {
     return Value() / Timestamp::kTimestampUnitsPerSecond;
   }
-  // Return the value in units of milliseconds (the underlying value is in
-  // microseconds).
+
+  /**
+   * @brief Return the value in units of milliseconds.
+   * @return The value in units of milliseconds.
+   */
   double Milliseconds() const {
     return Value() / Timestamp::kTimestampUnitsPerMillisecond;
   }
-  // Return the value in units of microseconds.  The underlying value is already
-  // in microseconds, but this function should be preferred over Value() in case
-  // the underlying representation changes.
+
+  /**
+   * @brief Return the value in units of microseconds.
+   * @return The value in units of microseconds.
+   */
   int64_t Microseconds() const { return Value(); }
   std::string DebugString() const;
 
@@ -267,24 +307,36 @@ class TimestampDiff {
   bool operator>=(TimestampDiff other) const {
     return timestamp_ >= other.timestamp_;
   }
-  // Unary negation of a TimestampDiff is allowed.
   TimestampDiff operator-() const { return TimestampDiff(-timestamp_); }
-  // See the addition and subtraction functions in Timestamp for details.
   TimestampDiff operator+(TimestampDiff other) const;
   TimestampDiff operator-(TimestampDiff other) const;
   Timestamp operator+(Timestamp timestamp) const;
 
-  // Create a timestamp from a seconds value.
+  /**
+   * @brief Create a timestamp from a seconds value.
+   * @param seconds The seconds value.
+   * @return A TimestampDiff object.
+   */
   static TimestampDiff FromSeconds(double seconds) {
     return TimestampDiff(TimestampBaseType{
         std::round(seconds * Timestamp::kTimestampUnitsPerSecond)});
   }
-  // Create a timestamp from a milliseconds value.
+
+  /**
+   * @brief Create a timestamp from a milliseconds value.
+   * @param milliseconds The milliseconds value.
+   * @return A TimestampDiff object.
+   */
   static TimestampDiff FromMilliseconds(double milliseconds) {
     return TimestampDiff(TimestampBaseType{
         std::round(milliseconds * Timestamp::kTimestampUnitsPerMillisecond)});
   }
-  // Create a timestamp from an integer microseconds value.
+
+  /**
+   * @brief Create a timestamp from an integer microseconds value.
+   * @param microseconds The microseconds value.
+   * @return A TimestampDiff object.
+   */
   static TimestampDiff FromMicroseconds(int64_t microseconds) {
     return TimestampDiff(TimestampBaseType{microseconds});
   }

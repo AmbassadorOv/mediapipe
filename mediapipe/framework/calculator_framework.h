@@ -51,6 +51,11 @@
 #ifndef MEDIAPIPE_FRAMEWORK_CALCULATOR_FRAMEWORK_H_
 #define MEDIAPIPE_FRAMEWORK_CALCULATOR_FRAMEWORK_H_
 
+/**
+ * @file calculator_framework.h
+ * @brief Includes the core portions of the MediaPipe framework.
+ */
+
 #include "mediapipe/framework/calculator_base.h"
 #include "mediapipe/framework/calculator_context.h"
 #include "mediapipe/framework/calculator_contract.h"

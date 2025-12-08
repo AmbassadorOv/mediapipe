@@ -76,6 +76,14 @@ namespace mediapipe {
 // multiple threads at the same time.  However, the thread that calls the
 // methods of a calculator is not fixed.  Therefore, calculators should not
 // use ThreadLocal objects.
+
+/**
+ * @brief The base class for all calculators.
+ *
+ * A calculator is a node in a MediaPipe graph that performs a specific task.
+ * Subclasses must implement GetContract() and Process(), and be registered
+ * with REGISTER_CALCULATOR().
+ */
 class CalculatorBase {
  public:
   CalculatorBase();
@@ -117,56 +125,51 @@ class CalculatorBase {
   //         &cc->Inputs().Index(i), StrCat("Generic Output Stream ", i));
   //   }
 
-  // Open is called before any Process() calls, on a freshly constructed
-  // calculator.  Subclasses may override this method to perform necessary
-  // setup, and possibly output Packets and/or set output streams' headers.
-  // Must return absl::OkStatus() to indicate success. On failure any
-  // other status code can be returned. If failure is returned then the
-  // framework will call neither Process() nor Close() on the calculator (so any
-  // necessary cleanup should be done before returning failure or in the
-  // destructor).
+  /**
+   * @brief Called before any Process() calls, on a freshly constructed
+   * calculator.
+   *
+   * Subclasses may override this method to perform necessary setup, and
+   * possibly output Packets and/or set output streams' headers.
+   *
+   * @param cc The calculator context.
+   * @return absl::Status OkStatus() on success, any other status on failure.
+   */
   virtual absl::Status Open(CalculatorContext* cc) { return absl::OkStatus(); }
 
-  // Processes the incoming inputs. May call the methods on cc to access
-  // inputs and produce outputs.
-  //
-  // Process() called on a non-source node must return
-  // absl::OkStatus() to indicate that all went well, or any other
-  // status code to signal an error.
-  // For example:
-  //     absl::UnknownError("Failure Message");
-  // Notice the convenience functions in util/task/canonical_errors.h .
-  // If a non-source Calculator returns tool::StatusStop(), then this
-  // signals the graph is being cancelled early.  In this case, all
-  // source Calculators and graph input streams will be closed (and
-  // remaining Packets will propagate through the graph).
-  //
-  // A source node will continue to have Process() called on it as long
-  // as it returns absl::OkStatus().  To indicate that there is
-  // no more data to be generated return tool::StatusStop().  Any other
-  // status indicates an error has occurred.
+  /**
+   * @brief Processes the incoming inputs.
+   *
+   * May call the methods on cc to access inputs and produce outputs.
+   *
+   * @param cc The calculator context.
+   * @return absl::Status OkStatus() on success, any other status on failure.
+   */
   virtual absl::Status Process(CalculatorContext* cc) = 0;
 
-  // Is called if Open() was called and succeeded.  Is called either
-  // immediately after processing is complete or after a graph run has ended
-  // (if an error occurred in the graph).  Must return absl::OkStatus()
-  // to indicate success.  On failure any other status code can be returned.
-  // Packets may be output during a call to Close().  However, output packets
-  // are silently discarded if Close() is called after a graph run has ended.
-  //
-  // NOTE: Do not call cc->GraphStatus() in Close() if you need to check if the
-  // processing is complete. Please, see CalculatorContext::GraphStatus
-  // documentation for the suggested solution.
+  /**
+   * @brief Called if Open() was called and succeeded.
+   *
+   * Is called either immediately after processing is complete or after a graph
+   * run has ended (if an error occurred in the graph).
+   *
+   * @param cc The calculator context.
+   * @return absl::Status OkStatus() on success, any other status on failure.
+   */
   virtual absl::Status Close(CalculatorContext* cc) { return absl::OkStatus(); }
 
-  // Returns a value according to which the framework selects
-  // the next source calculator to Process(); smaller value means
-  // Process() first. The default implementation returns the smallest
-  // NextTimestampBound value over all the output streams, but subclasses
-  // may override this. If a calculator is not a source, this method is
-  // not called.
-  // TODO: Does this method need to be virtual? No Calculator
-  // subclasses override the SourceProcessOrder method.
+  /**
+   * @brief Returns a value according to which the framework selects the next
+   * source calculator to Process().
+   *
+   * Smaller value means Process() first. The default implementation returns
+   * the smallest NextTimestampBound value over all the output streams, but
+   * subclasses may override this. If a calculator is not a source, this
+   * method is not called.
+   *
+   * @param cc The calculator context.
+   * @return Timestamp The timestamp to process next.
+   */
   virtual Timestamp SourceProcessOrder(const CalculatorContext* cc) const;
 };
 

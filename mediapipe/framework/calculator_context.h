@@ -37,14 +37,16 @@
 
 namespace mediapipe {
 
-// A CalculatorContext provides information about the graph it is running
-// inside of through a number of accessor functions: Inputs(), Outputs(),
-// InputSidePackets(), Options(), etc.
-//
-// CalculatorBase APIs, such as CalculatorBase::Open(CalculatorContext* cc),
-// CalculatorBase::Process(CalculatorContext* cc), and
-// CalculatorBase::Close(CalculatorContext* cc), will only interact with
-// its own CalculatorContext object for exchanging data with the framework.
+/**
+ * @brief A CalculatorContext provides information about the graph it is running
+ * inside of through a number of accessor functions: Inputs(), Outputs(),
+ * InputSidePackets(), Options(), etc.
+ *
+ * CalculatorBase APIs, such as CalculatorBase::Open(CalculatorContext* cc),
+ * CalculatorBase::Process(CalculatorContext* cc), and
+ * CalculatorBase::Close(CalculatorContext* cc), will only interact with
+ * its own CalculatorContext object for exchanging data with the framework.
+ */
 class CalculatorContext {
  public:
   CalculatorContext(CalculatorState* calculator_state,
@@ -57,61 +59,135 @@ class CalculatorContext {
   CalculatorContext(const CalculatorContext&) = delete;
   CalculatorContext& operator=(const CalculatorContext&) = delete;
 
+  /**
+   * @brief Returns the name of the calculator node.
+   * @return The name of the calculator node.
+   */
   const std::string& NodeName() const;
+
+  /**
+   * @brief Returns the ID of the calculator node.
+   * @return The ID of the calculator node.
+   */
   int NodeId() const;
+
+  /**
+   * @brief Returns the maximum number of in-flight Process() calls.
+   * @return The maximum number of in-flight Process() calls.
+   */
   int NodeMaxInFlight() const;
+
+  /**
+   * @brief Returns the type of the calculator.
+   * @return The type of the calculator.
+   */
   const std::string& CalculatorType() const;
-  // Returns the options given to this calculator. The Calculator or
-  // CalculatorBase implementation may get its options by calling
-  // GetExtension() on the result.
+
+  /**
+   * @brief Returns the options given to this calculator.
+   *
+   * The Calculator or CalculatorBase implementation may get its options by
+   * calling GetExtension() on the result.
+   * @return The options given to this calculator.
+   */
   const CalculatorOptions& Options() const;
 
-  // Returns the options given to this calculator.  Template argument T must
-  // be the type of the protobuf extension message or the protobuf::Any
-  // message containing the options.
+  /**
+   * @brief Returns the options given to this calculator.
+   *
+   * Template argument T must be the type of the protobuf extension message or
+   * the protobuf::Any message containing the options.
+   * @tparam T The type of the options.
+   * @return The options given to this calculator.
+   */
   template <class T>
   const T& Options() const {
     return calculator_state_->Options<T>();
   }
 
+  /**
+   * @brief Returns true if the calculator has options of the given type.
+   * @tparam T The type of the options.
+   * @return True if the calculator has options of the given type.
+   */
   template <class T>
   bool HasOptions() const {
     return calculator_state_->HasOptions<T>();
   }
 
-  // Returns a counter using the graph's counter factory. The counter's name is
-  // the passed-in name, prefixed by the calculator node's name (if present) or
-  // the calculator's type (if not).
+  /**
+   * @brief Returns a counter using the graph's counter factory.
+   *
+   * The counter's name is the passed-in name, prefixed by the calculator
+   * node's name (if present) or the calculator's type (if not).
+   * @param name The name of the counter.
+   * @return A pointer to the counter.
+   */
   Counter* GetCounter(const std::string& name);
 
-  // Returns the counter set, which can be used to create new counters.
-  // No prefix is added to counters created in this way.
+  /**
+   * @brief Returns the counter set, which can be used to create new counters.
+   *
+   * No prefix is added to counters created in this way.
+   * @return A pointer to the counter factory.
+   */
   CounterFactory* GetCounterFactory();
 
-  // Returns the current input timestamp, or Timestamp::Unset if there are
-  // no input packets.
+  /**
+   * @brief Returns the current input timestamp.
+   * @return The current input timestamp, or Timestamp::Unset if there are
+   * no input packets.
+   */
   Timestamp InputTimestamp() const {
     return input_timestamps_.empty() ? Timestamp::Unset()
                                      : input_timestamps_.front();
   }
 
-  // Returns a reference to the input side packet set.
+  /**
+   * @brief Returns a reference to the input side packet set.
+   * @return A reference to the input side packet set.
+   */
   const PacketSet& InputSidePackets() const;
-  // Returns a reference to the output side packet collection.
+
+  /**
+   * @brief Returns a reference to the output side packet collection.
+   * @return A reference to the output side packet collection.
+   */
   OutputSidePacketSet& OutputSidePackets();
-  // Returns a reference to the input stream collection.
-  // You may consume or move the value packets from the Inputs.
+
+  /**
+   * @brief Returns a reference to the input stream collection.
+   *
+   * You may consume or move the value packets from the Inputs.
+   * @return A reference to the input stream collection.
+   */
   InputStreamShardSet& Inputs();
-  // Returns a const reference to the input stream collection.
+
+  /**
+   * @brief Returns a const reference to the input stream collection.
+   * @return A const reference to the input stream collection.
+   */
   const InputStreamShardSet& Inputs() const;
-  // Returns a reference to the output stream collection.
+
+  /**
+   * @brief Returns a reference to the output stream collection.
+   * @return A reference to the output stream collection.
+   */
   OutputStreamShardSet& Outputs();
-  // Returns a const reference to the output stream collection.
+
+  /**
+   * @brief Returns a const reference to the output stream collection.
+   * @return A const reference to the output stream collection.
+   */
   const OutputStreamShardSet& Outputs() const;
 
-  // Sets this packet timestamp offset for Packets going to all outputs.
-  // If you only want to set the offset for a single output stream then
-  // use OutputStream::SetOffset() directly.
+  /**
+   * @brief Sets this packet timestamp offset for Packets going to all outputs.
+   *
+   * If you only want to set the offset for a single output stream then
+   * use OutputStream::SetOffset() directly.
+   * @param offset The timestamp offset.
+   */
   void SetOffset(TimestampDiff offset);
 
   // DEPRECATED: This was intended to get graph run status during
@@ -139,15 +215,18 @@ class CalculatorContext {
     return ServiceBinding<T>(calculator_state_->GetServiceObject(service));
   }
 
-  // Gets interface to access resources (file system, assets, etc.) from
-  // calculators.
-  //
-  // NOTE: this is the preferred way to access resources from subgraphs and
-  // calculators as it allows for fine grained per graph configuration.
-  //
-  // Resources can be configured by setting a custom `kResourcesService` graph
-  // service on `CalculatorGraph`. The default resources service can be created
-  // and reused through `CreateDefaultResources`.
+  /**
+   * @brief Gets interface to access resources (file system, assets, etc.) from
+   * calculators.
+   *
+   * NOTE: this is the preferred way to access resources from subgraphs and
+   * calculators as it allows for fine grained per graph configuration.
+   *
+   * Resources can be configured by setting a custom `kResourcesService` graph
+   * service on `CalculatorGraph`. The default resources service can be created
+   * and reused through `CreateDefaultResources`.
+   * @return A const reference to the resources.
+   */
   const Resources& GetResources() const {
     return calculator_state_->GetResources();
   }

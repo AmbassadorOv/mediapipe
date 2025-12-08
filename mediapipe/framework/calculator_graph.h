@@ -71,86 +71,84 @@ struct GpuSharedData;
 
 typedef absl::StatusOr<OutputStreamPoller> StatusOrPoller;
 
-// The class representing a DAG of calculator nodes.
-//
-// CalculatorGraph is the primary API for the MediaPipe Framework.
-// In general, CalculatorGraph should be used if the only thing you need
-// to do is run the graph (without pushing data in or extracting it as
-// the graph runs).
-//
-// Example:
-//   // Build dependency "//mediapipe/framework:calculator_framework".
-//
-//   #include "mediapipe/framework/calculator_framework.h"
-//
-//   mediapipe::CalculatorGraphConfig config;
-//   MP_RETURN_IF_ERROR(mediapipe::tool::ParseGraphFromString(kGraphStr,
-//   &config)); mediapipe::CalculatorGraph graph;
-//   MP_RETURN_IF_ERROR(graph.Initialize(config));
-//
-//   std::map<std::string, mediapipe::Packet> extra_side_packets;
-//   extra_side_packets["video_id"] = mediapipe::MakePacket<std::string>(
-//       "3edb9503834e9b42");
-//   MP_RETURN_IF_ERROR(graph.Run(extra_side_packets));
-//
-//   // Run again (demonstrating the asynchronous StartRun call with more
-//   // concise initializer list syntax).
-//   MP_RETURN_IF_ERROR(graph.StartRun(
-//       {{"video_id", mediapipe::MakePacket<std::string>("Ex-uGhDzue4")}}));
-//   // See mediapipe/framework/graph_runner.h for an interface
-//   // to insert and extract packets from a graph as it runs.
-//   // Once it is done using the graph, close its streams and wait till done.
-//   MP_RETURN_IF_ERROR(graph->CloseAllInputStreams());
-//   MP_RETURN_IF_ERROR(graph->WaitUntilDone());
+/**
+ * @brief The class representing a DAG of calculator nodes.
+ *
+ * CalculatorGraph is the primary API for the MediaPipe Framework.
+ * In general, CalculatorGraph should be used if the only thing you need
+ * to do is run the graph (without pushing data in or extracting it as
+ * the graph runs).
+ */
 class CalculatorGraph {
  public:
-  // Defines possible modes for adding a packet to a graph input stream.
-  // WAIT_TILL_NOT_FULL can be used to control the memory usage of a graph by
-  // avoiding adding a new packet until all dependent input streams fall below
-  // the maximum queue size specified in the graph configuration.
-  // ADD_IF_NOT_FULL could also be used to control the latency if used in a
-  // real-time graph (e.g. drop camera frames if the MediaPipe graph queues are
-  // full).
+  /**
+   * @brief Defines possible modes for adding a packet to a graph input stream.
+   */
   enum class GraphInputStreamAddMode {
-    // Blocks and waits until none of the affected streams
-    // are full. Note that if max_queue_size is set to -1, the packet will be
-    // added regardless of queue size.
+    /**
+     * @brief Blocks and waits until none of the affected streams are full.
+     *
+     * Note that if max_queue_size is set to -1, the packet will be added
+     * regardless of queue size.
+     */
     WAIT_TILL_NOT_FULL,
-    // Returns and does not add packet if any affected input
-    // stream is full.
+    /**
+     * @brief Returns and does not add packet if any affected input stream is
+     * full.
+     */
     ADD_IF_NOT_FULL
   };
 
-  // Creates an uninitialized graph.
+  /**
+   * @brief Creates an uninitialized graph.
+   */
   CalculatorGraph();
   CalculatorGraph(const CalculatorGraph&) = delete;
   CalculatorGraph& operator=(const CalculatorGraph&) = delete;
 
-  // Initializes the graph from its proto description (using Initialize())
-  // and crashes if something goes wrong.
+  /**
+   * @brief Initializes the graph from its proto description.
+   * @param config The graph config.
+   */
   explicit CalculatorGraph(CalculatorGraphConfig config);
 
-  // Initializes the graph with shared GraphServices from an existing MP graph
-  // environment. It enables to run a CalculatorGraph within a Calculator.
+  /**
+   * @brief Initializes the graph with shared GraphServices from an existing MP
+   * graph environment.
+   *
+   * It enables to run a CalculatorGraph within a Calculator.
+   * @param cc The calculator context.
+   */
   explicit CalculatorGraph(CalculatorContext* cc);
 
   virtual ~CalculatorGraph();
 
-  // Initializes the graph from a its proto description.
-  // side_packets that are provided at this stage are common across all Run()
-  // invocations and could be used to execute PacketGenerators immediately.
+  /**
+   * @brief Initializes the graph from a its proto description.
+   * @param config The graph config.
+   * @param side_packets The side packets.
+   * @return absl::Status OkStatus() on success, any other status on failure.
+   */
   absl::Status Initialize(CalculatorGraphConfig config,
                           const std::map<std::string, Packet>& side_packets);
 
-  // Convenience version which does not take side packets.
+  /**
+   * @brief Convenience version which does not take side packets.
+   * @param config The graph config.
+   * @return absl::Status OkStatus() on success, any other status on failure.
+   */
   absl::Status Initialize(CalculatorGraphConfig config);
 
-  // Initializes the CalculatorGraph from the specified graph and subgraph
-  // configs.  Template graph and subgraph configs can be specified through
-  // |input_templates|.  Every subgraph must have its graph type specified in
-  // CalclatorGraphConfig.type.  A subgraph can be instantiated directly by
-  // specifying its type in |graph_type|.  A template graph can be instantiated
-  // directly by specifying its template arguments in |options|.
+  /**
+   * @brief Initializes the CalculatorGraph from the specified graph and
+   * subgraph configs.
+   * @param configs The graph configs.
+   * @param templates The subgraph templates.
+   * @param side_packets The side packets.
+   * @param graph_type The graph type.
+   * @param options The subgraph options.
+   * @return absl::Status OkStatus() on success, any other status on failure.
+   */
   absl::Status Initialize(
       const std::vector<CalculatorGraphConfig>& configs,
       const std::vector<CalculatorGraphTemplate>& templates,
@@ -158,284 +156,362 @@ class CalculatorGraph {
       const std::string& graph_type = "",
       const Subgraph::SubgraphOptions* options = nullptr);
 
-  // Returns the canonicalized CalculatorGraphConfig for this graph.
+  /**
+   * @brief Returns the canonicalized CalculatorGraphConfig for this graph.
+   * @return The canonicalized CalculatorGraphConfig for this graph.
+   */
   const CalculatorGraphConfig& Config() const {
     return validated_graph_->Config();
   }
 
-  // Observes the named output stream. packet_callback will be invoked on every
-  // packet emitted by the output stream. Can only be called before Run() or
-  // StartRun(). It is possible for packet_callback to be called until the
-  // object is destroyed, even if e.g. Cancel() or WaitUntilDone() have already
-  // been called. After this object is destroyed so is packet_callback.
-  // TODO: Rename to AddOutputStreamCallback.
-  //
-  // Note: use `SetErrorCallback` to subscribe for errors when using graph for
-  // async use cases.
+  /**
+   * @brief Observes the named output stream.
+   *
+   * packet_callback will be invoked on every packet emitted by the output
+   * stream. Can only be called before Run() or StartRun().
+   * @param stream_name The name of the output stream.
+   * @param packet_callback The callback function.
+   * @param observe_timestamp_bounds True to observe timestamp bounds.
+   * @return absl::Status OkStatus() on success, any other status on failure.
+   */
   absl::Status ObserveOutputStream(
       const std::string& stream_name,
       std::function<absl::Status(const Packet&)> packet_callback,
       bool observe_timestamp_bounds = false);
 
-  // Adds an OutputStreamPoller for a stream. This provides a synchronous,
-  // polling API for accessing a stream's output. Should only be called before
-  // Run() or StartRun(). For asynchronous output, use ObserveOutputStream. See
-  // also the helpers in tool/sink.h.
+  /**
+   * @brief Adds an OutputStreamPoller for a stream.
+   *
+   * This provides a synchronous, polling API for accessing a stream's output.
+   * Should only be called before Run() or StartRun().
+   * @param stream_name The name of the output stream.
+   * @param observe_timestamp_bounds True to observe timestamp bounds.
+   * @return A StatusOrPoller object.
+   */
   StatusOrPoller AddOutputStreamPoller(const std::string& stream_name,
                                        bool observe_timestamp_bounds = false);
 
-  // Gets output side packet by name. The output side packet can be successfully
-  // retrevied in one of the following situations:
-  //   - The graph is done.
-  //   - The output side packet has been generated by a calculator and the graph
-  //     is currently idle.
-  //   - The side packet is a base packet generated by a PacketGenerator.
-  // Returns error if the the output side packet is not found or empty.
+  /**
+   * @brief Gets output side packet by name.
+   *
+   * The output side packet can be successfully retrevied in one of the
+   * following situations:
+   *   - The graph is done.
+   *   - The output side packet has been generated by a calculator and the graph
+   *     is currently idle.
+   *   - The side packet is a base packet generated by a PacketGenerator.
+   * @param packet_name The name of the output side packet.
+   * @return A StatusOr<Packet> object.
+   */
   absl::StatusOr<Packet> GetOutputSidePacket(const std::string& packet_name);
 
-  // Runs the graph after adding the given extra input side packets.  All
-  // arguments are forgotten after Run() returns.
-  // Run() is a blocking call and will return when all calculators are done.
+  /**
+   * @brief Runs the graph after adding the given extra input side packets.
+   *
+   * All arguments are forgotten after Run() returns. Run() is a blocking call
+   * and will return when all calculators are done.
+   * @param extra_side_packets The extra side packets.
+   * @return absl::Status OkStatus() on success, any other status on failure.
+   */
   virtual absl::Status Run(
       const std::map<std::string, Packet>& extra_side_packets);
 
-  // Run the graph without adding any input side packets.
+  /**
+   * @brief Run the graph without adding any input side packets.
+   * @return absl::Status OkStatus() on success, any other status on failure.
+   */
   absl::Status Run() { return Run({}); }
 
-  // Start a run of the graph.  StartRun, WaitUntilDone, Cancel, HasError,
-  // AddPacketToInputStream, and CloseInputStream allow more control over
-  // the execution of the graph run.  You can insert packets directly into
-  // a stream while the graph is running. Once StartRun has been called,
-  // the graph will continue to run until all work is either done or canceled,
-  // meaning that either WaitUntilDone() or Cancel() has been called and has
-  // completed. If StartRun returns an error, then the graph is not started and
-  // a subsequent call to StartRun can be attempted.
-  //
-  // Example:
-  //   MP_RETURN_IF_ERROR(graph.StartRun(...));
-  //   while (true) {
-  //     if (graph.HasError() || want_to_stop) break;
-  //     MP_RETURN_IF_ERROR(graph.AddPacketToInputStream(...));
-  //   }
-  //   for (const std::string& stream : streams) {
-  //     MP_RETURN_IF_ERROR(graph.CloseInputStream(stream));
-  //   }
-  //   MP_RETURN_IF_ERROR(graph.WaitUntilDone());
+  /**
+   * @brief Start a run of the graph.
+   * @param extra_side_packets The extra side packets.
+   * @return absl::Status OkStatus() on success, any other status on failure.
+   */
   absl::Status StartRun(
       const std::map<std::string, Packet>& extra_side_packets) {
     return StartRun(extra_side_packets, {});
   }
 
-  // In addition to the above StartRun, add additional parameter to set the
-  // stream header before running.
-  // Note: We highly discourage the use of stream headers, this is added for the
-  // compatibility of existing calculators that use headers during Open().
+  /**
+   * @brief Start a run of the graph with stream headers.
+   * @param extra_side_packets The extra side packets.
+   * @param stream_headers The stream headers.
+   * @return absl::Status OkStatus() on success, any other status on failure.
+   */
   absl::Status StartRun(const std::map<std::string, Packet>& extra_side_packets,
                         const std::map<std::string, Packet>& stream_headers);
 
-  // Wait for the current run to finish (block the current thread
-  // until all source calculators have returned StatusStop(), all
-  // graph_input_streams_ have been closed, and no more calculators can
-  // be run). This function can be called only after StartRun(). If you want to
-  // stop the run quickly, without waiting for all the work in progress to
-  // finish, see Cancel(). The graph cannot be destroyed until all work is
-  // either done or canceled, meaning that either WaitUntilDone() or Cancel()
-  // has been called and completed.
+  /**
+   * @brief Wait for the current run to finish.
+   * @return absl::Status OkStatus() on success, any other status on failure.
+   */
   absl::Status WaitUntilDone();
 
-  // Wait until the running graph is in the idle mode, which is when nothing can
-  // be scheduled and nothing is running in the worker threads. This function
-  // can be called only after StartRun().
-  //
-  // NOTE: The graph must not have any source nodes because source nodes prevent
-  // the running graph from becoming idle until the source nodes are done.
-  // Currently, `WaitUntilIdle` cannot be used reliably on graphs with any
-  // source nodes.
+  /**
+   * @brief Wait until the running graph is in the idle mode.
+   * @return absl::Status OkStatus() on success, any other status on failure.
+   */
   absl::Status WaitUntilIdle();
 
-  // Wait until a packet is emitted on one of the observed output streams.
-  // Returns immediately if a packet has already been emitted since the last
-  // call to this function.
-  // Returns OutOfRangeError if the graph terminated while waiting.
+  /**
+   * @brief Wait until a packet is emitted on one of the observed output
+   * streams.
+   * @return absl::Status OkStatus() on success, any other status on failure.
+   */
   absl::Status WaitForObservedOutput();
 
-  // Quick non-locking means of checking if the graph has encountered an error.
+  /**
+   * @brief Quick non-locking means of checking if the graph has encountered an
+   * error.
+   * @return True if the graph has encountered an error.
+   */
   bool HasError() const { return has_error_; }
 
-  // Returns debugging information about the graph transient state, including
-  // information about all input streams and their timestamp bounds. This method
-  // is thread safe and can be called from any thread.
+  /**
+   * @brief Returns debugging information about the graph transient state.
+   * @return A StatusOr<GraphRuntimeInfo> object.
+   */
   absl::StatusOr<GraphRuntimeInfo> GetGraphRuntimeInfo();
 
-  // Add a Packet to a graph input stream based on the graph input stream add
-  // mode. If the mode is ADD_IF_NOT_FULL, the packet will not be added if any
-  // queue exceeds max_queue_size specified by the graph config and will return
-  // StatusUnavailable. The WAIT_TILL_NOT_FULL mode (default) will block until
-  // the queues fall below the max_queue_size before adding the packet. If the
-  // mode is max_queue_size is -1, then the packet is added regardless of the
-  // sizes of the queues in the graph. The input stream must have been specified
-  // in the configuration as a graph level input_stream. On error, nothing is
-  // added.
+  /**
+   * @brief Add a Packet to a graph input stream.
+   * @param stream_name The name of the input stream.
+   * @param packet The packet to add.
+   * @return absl::Status OkStatus() on success, any other status on failure.
+   */
   absl::Status AddPacketToInputStream(absl::string_view stream_name,
                                       const Packet& packet);
 
-  // Same as the l-value version of this function by the same name, but moves
-  // the r-value referenced packet into the stream instead of copying it over.
-  // This allows the graph to take exclusive ownership of the packet, which may
-  // allow more memory optimizations. Note that, if an error is returned, the
-  // packet may remain valid.  In particular, when using the ADD_IF_NOT_FULL
-  // mode with a full queue, this will return StatusUnavailable and the caller
-  // may try adding the packet again later.
+  /**
+   * @brief Add a Packet to a graph input stream.
+   * @param stream_name The name of the input stream.
+   * @param packet The packet to add.
+   * @return absl::Status OkStatus() on success, any other status on failure.
+   */
   absl::Status AddPacketToInputStream(absl::string_view stream_name,
                                       Packet&& packet);
 
-  // Indicates that input will arrive no earlier than a certain timestamp.
+  /**
+   * @brief Indicates that input will arrive no earlier than a certain
+   * timestamp.
+   * @param stream_name The name of the input stream.
+   * @param timestamp The timestamp.
+   * @return absl::Status OkStatus() on success, any other status on failure.
+   */
   absl::Status SetInputStreamTimestampBound(const std::string& stream_name,
                                             Timestamp timestamp);
 
-  // Sets the queue size of a graph input stream, overriding the graph default.
+  /**
+   * @brief Sets the queue size of a graph input stream.
+   * @param stream_name The name of the input stream.
+   * @param max_queue_size The maximum queue size.
+   * @return absl::Status OkStatus() on success, any other status on failure.
+   */
   absl::Status SetInputStreamMaxQueueSize(const std::string& stream_name,
                                           int max_queue_size);
 
-  // Check if an input stream exists in the graph
+  /**
+   * @brief Check if an input stream exists in the graph.
+   * @param name The name of the input stream.
+   * @return True if the input stream exists.
+   */
   bool HasInputStream(const std::string& name);
 
-  // Close a graph input stream.  If the graph has any graph input streams
-  // then Run() will not return until all the graph input streams have
-  // been closed (and all packets propagate through the graph).
-  // Note that multiple threads cannot call CloseInputStream() on the same
-  // stream_name at the same time.
+  /**
+   * @brief Close a graph input stream.
+   * @param stream_name The name of the input stream.
+   * @return absl::Status OkStatus() on success, any other status on failure.
+   */
   absl::Status CloseInputStream(const std::string& stream_name);
 
-  // Closes all the graph input streams.
+  /**
+   * @brief Closes all the graph input streams.
+   * @return absl::Status OkStatus() on success, any other status on failure.
+   */
   absl::Status CloseAllInputStreams();
 
-  // Closes all the graph input streams and source calculator nodes.
+  /**
+   * @brief Closes all the graph input streams and source calculator nodes.
+   * @return absl::Status OkStatus() on success, any other status on failure.
+   */
   absl::Status CloseAllPacketSources();
 
-  // Returns the pointer to the stream with the given name, or dies if none
-  // exists. The result remains owned by the CalculatorGraph.
+  /**
+   * @brief Returns the pointer to the stream with the given name.
+   * @param name The name of the output stream.
+   * @return The pointer to the stream with the given name, or dies if none
+   * exists.
+   */
   ABSL_DEPRECATED(
       "Prefer using a Calculator to get information of all sorts out of the "
       "graph.")
   const OutputStreamManager* FindOutputStreamManager(const std::string& name);
 
-  // Returns the ProfilingContext assocoaited with the CalculatorGraph.
+  /**
+   * @brief Returns the ProfilingContext assocoaited with the CalculatorGraph.
+   * @return The ProfilingContext assocoaited with the CalculatorGraph.
+   */
   ProfilingContext* profiler() { return profiler_.get(); }
-  // Collects the runtime profile for Open(), Process(), and Close() of each
-  // calculator in the graph. May be called at any time after the graph has been
-  // initialized.
+  /**
+   * @brief Collects the runtime profile for Open(), Process(), and Close() of
+   * each calculator in the graph.
+   * @param profiles A vector to store the profiles.
+   * @return absl::Status OkStatus() on success, any other status on failure.
+   */
   ABSL_DEPRECATED("Use profiler()->GetCalculatorProfiles() instead")
   absl::Status GetCalculatorProfiles(std::vector<CalculatorProfile>*) const;
 
-  // Set the type of counter used in this graph.
+  /**
+   * @brief Set the type of counter used in this graph.
+   * @param factory The counter factory.
+   */
   void SetCounterFactory(CounterFactory* factory) {
     counter_factory_.reset(factory);
   }
+
+  /**
+   * @brief Get the type of counter used in this graph.
+   * @return The counter factory.
+   */
   CounterFactory* GetCounterFactory() { return counter_factory_.get(); }
 
-  // Sets the error callback to receive graph execution errors when blocking
-  // calls like `WaitUntilIdle()`, `WaitUntilDone()` cannot be used.
-  //
-  // Useful for async graph use cases: e.g. user entering words and each
-  // word is sent to the graph while graph outputs are received and rendered
-  // asynchronously.
-  //
-  // NOTE:
-  // - Must be called before graph is initialized.
-  // - May be executed from multiple threads.
-  // - Errors are first processed by the graph, then the graph transitions into
-  //   the error state, and then finally the callback is invoked.
+  /**
+   * @brief Sets the error callback to receive graph execution errors.
+   * @param error_callback The error callback.
+   * @return absl::Status OkStatus() on success, any other status on failure.
+   */
   absl::Status SetErrorCallback(
       std::function<void(const absl::Status&)> error_callback);
 
-  // Callback when an error is encountered.
-  // Adds the error to the vector of errors.
-  //
-  // Use `SetErrorCallback` to subscribe for errors when using graph for async
-  // use cases.
+  /**
+   * @brief Callback when an error is encountered.
+   * @param error The error.
+   */
   void RecordError(const absl::Status& error) ABSL_LOCKS_EXCLUDED(error_mutex_);
 
-  // Combines errors into a status. Returns true if the vector of errors is
-  // non-empty.
+  /**
+   * @brief Combines errors into a status.
+   * @param error_prefix The error prefix.
+   * @param error_status The status to store the combined errors.
+   * @return True if the vector of errors is non-empty.
+   */
   bool GetCombinedErrors(const std::string& error_prefix,
                          absl::Status* error_status);
-  // Convenience overload which specifies a default error prefix.
+  /**
+   * @brief Convenience overload which specifies a default error prefix.
+   * @param error_status The status to store the combined errors.
+   * @return True if the vector of errors is non-empty.
+   */
   bool GetCombinedErrors(absl::Status* error_status);
 
-  // Returns the maximum input stream queue size.
+  /**
+   * @brief Returns the maximum input stream queue size.
+   * @return The maximum input stream queue size.
+   */
   int GetMaxInputStreamQueueSize();
 
-  // Get the mode for adding packets to an input stream.
+  /**
+   * @brief Get the mode for adding packets to an input stream.
+   * @return The mode for adding packets to an input stream.
+   */
   GraphInputStreamAddMode GetGraphInputStreamAddMode() const;
 
-  // Set the mode for adding packets to an input stream.
+  /**
+   * @brief Set the mode for adding packets to an input stream.
+   * @param mode The mode for adding packets to an input stream.
+   */
   void SetGraphInputStreamAddMode(GraphInputStreamAddMode mode);
 
-  // Aborts the scheduler if the graph is not terminated; no-op otherwise. Does
-  // not wait for all work in progress to finish. To stop the run and wait for
-  // work in progress to finish, see CloseAllInputStreams() and WaitUntilDone().
-  // The graph cannot be destroyed until all work is either done or canceled,
-  // meaning that either WaitUntilDone() or Cancel() has been called and
-  // completed.
+  /**
+   * @brief Aborts the scheduler if the graph is not terminated; no-op
+   * otherwise.
+   */
   void Cancel();
 
-  // Pauses the scheduler. Only used by calculator graph testing.
+  /**
+   * @brief Pauses the scheduler.
+   */
   ABSL_DEPRECATED(
       "CalculatorGraph will not allow external callers to explictly pause and "
       "resume a graph.")
   void Pause();
 
-  // Resumes the scheduler. Only used by calculator graph testing.
+  /**
+   * @brief Resumes the scheduler.
+   */
   ABSL_DEPRECATED(
       "CalculatorGraph will not allow external callers to explictly pause and "
       "resume a graph.")
   void Resume();
 
-  // Sets the executor that will run the nodes assigned to the executor
-  // named |name|. If |name| is empty, this sets the default executor. Must
-  // be called before the graph is initialized.
+  /**
+   * @brief Sets the executor that will run the nodes assigned to the executor
+   * named |name|.
+   * @param name The name of the executor.
+   * @param executor The executor.
+   * @return absl::Status OkStatus() on success, any other status on failure.
+   */
   absl::Status SetExecutor(const std::string& name,
                            std::shared_ptr<Executor> executor);
 
   // WARNING: the following public methods are exposed to Scheduler only.
 
-  // Return true if all the graph input streams have been closed.
+  /**
+   * @brief Return true if all the graph input streams have been closed.
+   * @return True if all the graph input streams have been closed.
+   */
   bool GraphInputStreamsClosed() {
     return num_closed_graph_input_streams_ == graph_input_streams_.size();
   }
 
-  // Returns true if this node or graph input stream is connected to
-  // any input stream whose queue has hit maximum capacity.
+  /**
+   * @brief Returns true if this node or graph input stream is connected to
+   * any input stream whose queue has hit maximum capacity.
+   * @param node_id The ID of the node.
+   * @return True if this node or graph input stream is connected to
+   * any input stream whose queue has hit maximum capacity.
+   */
   bool IsNodeThrottled(int node_id)
       ABSL_LOCKS_EXCLUDED(full_input_streams_mutex_);
 
-  // If any active source node or graph input stream is throttled and not yet
-  // closed, increases the max_queue_size for each full input stream in the
-  // graph.
-  // Returns true if at least one max_queue_size has been grown.
+  /**
+   * @brief If any active source node or graph input stream is throttled and not
+   * yet closed, increases the max_queue_size for each full input stream in the
+   * graph.
+   * @return True if at least one max_queue_size has been grown.
+   */
   bool UnthrottleSources() ABSL_LOCKS_EXCLUDED(full_input_streams_mutex_);
 
-  // Returns the scheduler's runtime measures for overhead measurement.
-  // Only meant for test purposes.
+  /**
+   * @brief Returns the scheduler's runtime measures for overhead measurement.
+   * @return The scheduler's runtime measures for overhead measurement.
+   */
   internal::SchedulerTimes GetSchedulerTimes() {
     return scheduler_.GetSchedulerTimes();
   }
 
 #if !MEDIAPIPE_DISABLE_GPU
-  // Returns a pointer to the GpuResources in use, if any.
-  // Only meant for internal use.
+  /**
+   * @brief Returns a pointer to the GpuResources in use, if any.
+   * @return A pointer to the GpuResources in use, if any.
+   */
   std::shared_ptr<GpuResources> GetGpuResources() const;
 
+  /**
+   * @brief Sets the GpuResources.
+   * @param resources The GpuResources.
+   * @return absl::Status OkStatus() on success, any other status on failure.
+   */
   absl::Status SetGpuResources(std::shared_ptr<GpuResources> resources);
 #endif  // !MEDIAPIPE_DISABLE_GPU
 
-  // Sets a service object, essentially a graph-level singleton, which can be
-  // accessed by calculators and subgraphs without requiring an explicit
-  // connection.
-  //
-  // NOTE: must be called before `Initialize`, so subgraphs can access services
-  // as well, as graph expansion happens during initialization.
+  /**
+   * @brief Sets a service object.
+   * @tparam T The type of the service object.
+   * @param service The service.
+   * @param object The service object.
+   * @return absl::Status OkStatus() on success, any other status on failure.
+   */
   template <typename T>
   absl::Status SetServiceObject(const GraphService<T>& service,
                                 std::shared_ptr<T> object) {
@@ -451,47 +527,33 @@ class CalculatorGraph {
     return service_manager_.SetServiceObject(service, object);
   }
 
+  /**
+   * @brief Gets a service object.
+   * @tparam T The type of the service object.
+   * @param service The service.
+   * @return The service object.
+   */
   template <typename T>
   std::shared_ptr<T> GetServiceObject(const GraphService<T>& service) {
     return service_manager_.GetServiceObject(service);
   }
 
-  // Disallows/disables default initialization of MediaPipe graph services.
-  //
-  // IMPORTANT: MediaPipe graph serices, essentially a graph-level singletons,
-  // are designed in the way, so they may provide default initialization. For
-  // example, this allows to run OpenGL processing wihtin the graph without
-  // provinging a praticular OpenGL context as it can be provided by
-  // default-initializable `kGpuService`. (One caveat here, you may still need
-  // to initialize it manually to share graph context with external context.)
-  //
-  // Even if calculators require some service optionally
-  // (`calculator_contract->UseService(kSomeService).Optional()`), it will be
-  // still initialized if it allows default initialization.
-  //
-  // So far, in rare cases, this may be unwanted and strict control of what
-  // services are allowed in the graph can be achieved by calling this method,
-  // following `SetServiceObject` call for services which are allowed in the
-  // graph.
-  //
-  // Recommendation: do not use unless you have to (for example, default
-  // initialization has side effects)
-  //
-  // NOTE: must be called before `StartRun`/`Run`, where services are checked
-  // and can be default-initialized.
+  /**
+   * @brief Disallows/disables default initialization of MediaPipe graph
+   * services.
+   * @return absl::Status OkStatus() on success, any other status on failure.
+   */
   absl::Status DisallowServiceDefaultInitialization() {
     allow_service_default_initialization_ = false;
     return absl::OkStatus();
   }
 
-  // Sets a service object, essentially a graph-level singleton, which can be
-  // accessed by calculators and subgraphs without requiring an explicit
-  // connection.
-  //
-  // NOTE: must be called before `Initialize`, so subgraphs can access services
-  // as well, as graph expansion happens during initialization.
-  //
-  // Only the Java API should call this directly.
+  /**
+   * @brief Sets a service object.
+   * @param service The service.
+   * @param p The service packet.
+   * @return absl::Status OkStatus() on success, any other status on failure.
+   */
   absl::Status SetServicePacket(const GraphServiceBase& service, Packet p) {
     // TODO: check that the graph has not been started!
     return service_manager_.SetServicePacket(service, p);

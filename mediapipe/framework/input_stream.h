@@ -26,40 +26,58 @@
 
 namespace mediapipe {
 
+/**
+ * @brief An interface for getting input packets in a calculator.
+ */
 class InputStream {
  public:
   InputStream(const InputStream&) = delete;
   InputStream& operator=(const InputStream&) = delete;
 
-  // Returns the const reference of the input, if the input is present, or an
-  // empty Packet otherwise.
+  /**
+   * @brief Returns the const reference of the input, if the input is present,
+   * or an empty Packet otherwise.
+   * @return The const reference of the input.
+   */
   virtual const Packet& Value() const = 0;
 
-  // Returns the non-const reference of the input, if the input is present, or
-  // an empty Packet otherwise.
+  /**
+   * @brief Returns the non-const reference of the input, if the input is
+   * present, or an empty Packet otherwise.
+   * @return The non-const reference of the input.
+   */
   virtual Packet& Value() = 0;
 
-  // Syntactic sugar for a common way to get the typed value from the stream.
+  /**
+   * @brief Syntactic sugar for a common way to get the typed value from the
+   * stream.
+   * @tparam T The type of the value.
+   * @return The typed value.
+   */
   template <typename T>
   const T& Get() const {
     return Value().Get<T>();
   }
 
-  // Syntactic sugar for checking if the input is empty.
+  /**
+   * @brief Syntactic sugar for checking if the input is empty.
+   * @return True if the input is empty.
+   */
   bool IsEmpty() const { return Value().IsEmpty(); }
 
-  // Returns true iff the Inputstream has been closed and there are no remaining
-  // Packets queued for processing. (Note that there may currently be a Packet
-  // available from the stream inside a Calculator's Process() function.)
-  // The stream could be closed either because the corresponding
-  // OutputStream::Close() has been called by the upstream Calculator, or
-  // because that Calculator has itself been Close()d. It is guaranteed that
-  // IsDone()==true when called from Calculator::Close().
+  /**
+   * @brief Returns true iff the Inputstream has been closed and there are no
+   * remaining Packets queued for processing.
+   * @return True iff the Inputstream has been closed and there are no
+   * remaining Packets queued for processing.
+   */
   virtual bool IsDone() const = 0;
 
-  // Returns the header Packet, if one was set for the
-  // corresponding OutputStream in the upstream Calculator's Open method.
-  // May be called in Calculator::Open(), Process() or Close().
+  /**
+   * @brief Returns the header Packet, if one was set for the
+   * corresponding OutputStream in the upstream Calculator's Open method.
+   * @return The header Packet.
+   */
   Packet Header() const { return header_; }
 
  protected:

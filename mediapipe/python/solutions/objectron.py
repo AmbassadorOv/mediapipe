@@ -12,7 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""MediaPipe Objectron."""
+"""MediaPipe Objectron.
+
+This module contains the Objectron solution.
+"""
 
 import enum
 from typing import List, Tuple, NamedTuple, Optional
@@ -60,8 +63,8 @@ class BoxLandmark(enum.IntEnum):
   #       +   +             +   +       |
   #       +   +     (0)     +   +       .------- x
   #       +   +             +   +        \
-  #       1 + + + + + + + + 5   +         \
-  #        \  +              \  +          \ z
+  #       1 + + + + + + + + 5   +         \ z
+  #        \  +              \  +          \
   #         \ +               \ +           \
   #          \+                \+
   #           2 + + + + + + + + 6
@@ -94,12 +97,14 @@ BOX_CONNECTIONS = frozenset([
 
 @attr.s(auto_attribs=True)
 class ObjectronModel(object):
+  """Objectron model."""
   model_path: str
   label_name: str
 
 
 @attr.s(auto_attribs=True, frozen=True)
 class ShoeModel(ObjectronModel):
+  """Shoe model."""
   model_path: str = ('mediapipe/modules/objectron/'
                      'object_detection_3d_sneakers.tflite')
   label_name: str = 'Footwear'
@@ -107,6 +112,7 @@ class ShoeModel(ObjectronModel):
 
 @attr.s(auto_attribs=True, frozen=True)
 class ChairModel(ObjectronModel):
+  """Chair model."""
   model_path: str = ('mediapipe/modules/objectron/'
                      'object_detection_3d_chair.tflite')
   label_name: str = 'Chair'
@@ -114,6 +120,7 @@ class ChairModel(ObjectronModel):
 
 @attr.s(auto_attribs=True, frozen=True)
 class CameraModel(ObjectronModel):
+  """Camera model."""
   model_path: str = ('mediapipe/modules/objectron/'
                      'object_detection_3d_camera.tflite')
   label_name: str = 'Camera'
@@ -121,6 +128,7 @@ class CameraModel(ObjectronModel):
 
 @attr.s(auto_attribs=True, frozen=True)
 class CupModel(ObjectronModel):
+  """Cup model."""
   model_path: str = ('mediapipe/modules/objectron/'
                      'object_detection_3d_cup.tflite')
   label_name: str = 'Coffee cup, Mug'
@@ -143,6 +151,14 @@ def _download_oss_objectron_models(objectron_model: str):
 
 
 def get_model_by_name(name: str) -> ObjectronModel:
+  """Gets the objectron model by name.
+
+  Args:
+    name: The name of the model.
+
+  Returns:
+    The ObjectronModel object.
+  """
   if name not in _MODEL_DICT:
     raise ValueError(f'{name} is not a valid model name for Objectron.')
   _download_oss_objectron_models(_MODEL_DICT[name].model_path)
@@ -151,6 +167,7 @@ def get_model_by_name(name: str) -> ObjectronModel:
 
 @attr.s(auto_attribs=True)
 class ObjectronOutputs(object):
+  """Objectron outputs."""
   landmarks_2d: landmark_pb2.NormalizedLandmarkList
   landmarks_3d: landmark_pb2.LandmarkList
   rotation: np.ndarray

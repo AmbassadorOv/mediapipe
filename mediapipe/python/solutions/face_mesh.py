@@ -12,7 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""MediaPipe Face Mesh."""
+"""MediaPipe Face Mesh.
+
+This module contains the FaceMesh solution.
+"""
 
 from typing import NamedTuple
 
@@ -119,7 +122,9 @@ class FaceMesh(SolutionBase):
 
     Returns:
       A NamedTuple object with a "multi_face_landmarks" field that contains the
-      face landmarks on each detected face.
+      face landmarks on each detected face. Each face is represented as a list
+      of 468 landmarks, or 478 if `refine_landmarks` is set to True. Each
+      landmark has x, y, and z coordinates.
     """
 
     return super().process(input_data={'image': image})

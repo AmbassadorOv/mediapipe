@@ -32,63 +32,71 @@
 
 namespace mediapipe {
 
-// A graph of packet generators.
-//
-// Initialize runs all the generators which it can (i.e. whose input
-// side packets are available), and stores the produced packets and
-// the generators that are not yet executed.
-//
-// Each call to RunGraphSetup uses the provided extra side packets, runs
-// all remaining components of the graph, and produces a complete set of
-// output side packets.  Initialize should only be called once.
-// RunGraphSetup may be called any number of times.
-//
-// This class is thread compatible.
+/**
+ * @brief A graph of packet generators.
+ *
+ * Initialize runs all the generators which it can (i.e. whose input
+ * side packets are available), and stores the produced packets and
+ * the generators that are not yet executed.
+ *
+ * Each call to RunGraphSetup uses the provided extra side packets, runs
+ * all remaining components of the graph, and produces a complete set of
+ * output side packets.  Initialize should only be called once.
+ * RunGraphSetup may be called any number of times.
+ *
+ * This class is thread compatible.
+ */
 class PacketGeneratorGraph {
  public:
   PacketGeneratorGraph() = default;
   PacketGeneratorGraph(const PacketGeneratorGraph&) = delete;
   PacketGeneratorGraph& operator=(const PacketGeneratorGraph&) = delete;
 
-  // The destructor has an essentially default implementation.
-  // However, there seems to be a bug or weird interaction with release builds
-  // and fission which caused inline default definitions of the destructor to
-  // violate the ODR. As a result, the destructor is moved to the .cc file.
-  // See b/17412838.
+  /**
+   * @brief The destructor has an essentially default implementation.
+   */
   virtual ~PacketGeneratorGraph();
 
-  // Initialize the PacketGeneratorGraph with the validated graph config
-  // and executor to use.  If executor is nullptr, then the application
-  // thread is used.
-  // TODO allow the use of more than one executor (done the same
-  // way as for CalculatorGraph).
-  // Run the base level of packet generator graph.  This is the
-  // portion of the graph which does not change with every call to
-  // CalculatorGraph::Run().  input_side_packets may be specified at this
-  // stage and will be common to all calls to CalculatorGraph::Run().
-  // Any generators which are runnable at this stage (that only depend on
-  // things in the graph or input_side_packets) will be run at this time.
+  /**
+   * @brief Initialize the PacketGeneratorGraph with the validated graph config
+   * and executor to use.
+   * @param validated_graph The validated graph config.
+   * @param executor The executor to use.
+   * @param input_side_packets The input side packets.
+   * @return absl::Status OkStatus() on success, any other status on failure.
+   */
   virtual absl::Status Initialize(
       const ValidatedGraphConfig* validated_graph,
       mediapipe::Executor* executor,
       const std::map<std::string, Packet>& input_side_packets);
 
-  // Add the input_side_packets and run any remaining generators (which
-  // must now be runnable) to produce output_side_packets.
+  /**
+   * @brief Add the input_side_packets and run any remaining generators to
+   * produce output_side_packets.
+   * @param input_side_packets The input side packets.
+   * @param output_side_packets The output side packets.
+   * @param non_scheduled_generators The non-scheduled generators.
+   * @return absl::Status OkStatus() on success, any other status on failure.
+   */
   virtual absl::Status RunGraphSetup(
       const std::map<std::string, Packet>& input_side_packets,
       std::map<std::string, Packet>* output_side_packets,
       std::vector<int>* non_scheduled_generators = nullptr) const;
 
-  // Get the base packets: the packets which are produced when Initialize
-  // is called.
+  /**
+   * @brief Get the base packets: the packets which are produced when
+   * Initialize is called.
+   * @return The base packets.
+   */
   virtual const std::map<std::string, Packet>& BasePackets() const {
     return base_packets_;
   }
 
-  // Get the non-base PacketGenerators (those not run at Initialize
-  // time due to missing dependencies).  The returned indexes are the
-  // positions of the generators in the validated graph config.
+  /**
+   * @brief Get the non-base PacketGenerators (those not run at Initialize
+   * time due to missing dependencies).
+   * @return The non-base PacketGenerators.
+   */
   virtual const std::vector<int>& NonBaseGenerators() const {
     return non_base_generators_;
   }

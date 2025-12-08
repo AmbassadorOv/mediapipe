@@ -64,6 +64,12 @@ namespace internal {
 class SchedulerQueue;
 }  // namespace internal
 
+/**
+ * @brief Represents a node in the calculator graph.
+ *
+ * This class is internally used by the Calculator framework to perform the
+ * computations.
+ */
 class CalculatorNode {
  public:
   // Handy typedef for a map from the name of an output stream to the set of ids
@@ -74,42 +80,60 @@ class CalculatorNode {
   CalculatorNode();
   CalculatorNode(const CalculatorNode&) = delete;
   CalculatorNode& operator=(const CalculatorNode&) = delete;
+
+  /**
+   * @brief Returns the ID of the node.
+   * @return The ID of the node.
+   */
   int Id() const {
     return node_type_info_ ? node_type_info_->Node().index : -1;
   }
 
-  // Returns a value according to which the scheduler queue determines the
-  // relative priority between runnable source nodes; a smaller value means
-  // running first. If a node is not a source, this method is not called.
+  /**
+   * @brief Returns a value according to which the scheduler queue determines
+   * the relative priority between runnable source nodes.
+   * @param cc The calculator context.
+   * @return The timestamp to process next.
+   */
   Timestamp SourceProcessOrder(const CalculatorContext* cc) const;
 
-  // Retrieves a string name for the node.  If the node's name was set in the
-  // calculator graph config, it will be returned.  Otherwise, a human-readable
-  // string that uniquely identifies the node is returned, e.g.
-  // "[FooBarCalculator with first output stream \"foo_bar_output\"]" for
-  // non-sink nodes and "[FooBarCalculator with node ID: 42 and input streams:
-  // \"foo_bar_input\"]" for sink nodes.  This name should be used in error
-  // messages where more context info is helpful.
+  /**
+   * @brief Retrieves a string name for the node.
+   * @return A string name for the node.
+   */
   std::string DebugName() const;
 
-  // Name of the executor which the node will execute on.  If empty, the node
-  // will execute on the default executor.
+  /**
+   * @brief Name of the executor which the node will execute on.
+   * @return The name of the executor.
+   */
   const std::string& Executor() const { return executor_; }
 
-  // Changes the executor a node is assigned to.
+  /**
+   * @brief Changes the executor a node is assigned to.
+   * @param executor The name of the executor.
+   */
   void SetExecutor(const std::string& executor);
 
-  // Calls Process() on the Calculator corresponding to this node.
+  /**
+   * @brief Calls Process() on the Calculator corresponding to this node.
+   * @param calculator_context The calculator context.
+   * @return absl::Status OkStatus() on success, any other status on failure.
+   */
   absl::Status ProcessNode(CalculatorContext* calculator_context);
 
-  // Initializes the node.  The buffer_size_hint argument is
-  // set to the value specified in the graph proto for this field.
-  // input_stream_managers/output_stream_managers is expected to point to
-  // a contiguous flat array with Input/OutputStreamManagers corresponding
-  // to the input/output stream indexes in validated_graph.
-  // output_side_packets is expected to point to a contiguous flat array with
-  // OutputSidePacketImpls corresponding to the output side packet indexes in
-  // validated_graph.
+  /**
+   * @brief Initializes the node.
+   * @param validated_graph The validated graph config.
+   * @param node_ref A reference to the node in the validated graph.
+   * @param input_stream_managers A pointer to the input stream managers.
+   * @param output_stream_managers A pointer to the output stream managers.
+   * @param output_side_packets A pointer to the output side packets.
+   * @param buffer_size_hint A hint for the buffer size.
+   * @param profiling_context The profiling context.
+   * @param graph_service_manager The graph service manager.
+   * @return absl::Status OkStatus() on success, any other status on failure.
+   */
   absl::Status Initialize(const ValidatedGraphConfig* validated_graph,
                           NodeTypeInfo::NodeRef node_ref,
                           InputStreamManager* input_stream_managers,
@@ -119,15 +143,19 @@ class CalculatorNode {
                           std::shared_ptr<ProfilingContext> profiling_context,
                           const GraphServiceManager* graph_service_manager);
 
-  // Sets up the node at the beginning of CalculatorGraph::Run(). This
-  // method is executed before any OpenNode() calls to the nodes
-  // within a CalculatorGraph. Creates a Calculator, and clears the
-  // input queues. Sets the callback to run when the node wants to
-  // schedule itself for later processing (in the order determined by
-  // the priority queue). ready_for_open_callback is called when OpenNode()
-  // can be scheduled. source_node_opened_callback is called when a source
-  // node is opened. schedule_callback is passed to the InputStreamHandler
-  // and is called each time a new invocation can be scheduled.
+  /**
+   * @brief Sets up the node at the beginning of CalculatorGraph::Run().
+   * @param all_side_packets The side packets.
+   * @param service_packets The service packets.
+   * @param ready_for_open_callback The callback to call when the node is ready
+   * to be opened.
+   * @param source_node_opened_callback The callback to call when a source node
+   * is opened.
+   * @param schedule_callback The callback to call to schedule the node.
+   * @param error_callback The callback to call on error.
+   * @param counter_factory The counter factory.
+   * @return absl::Status OkStatus() on success, any other status on failure.
+   */
   absl::Status PrepareForRun(
       const std::map<std::string, Packet>& all_side_packets,
       const std::map<std::string, Packet>& service_packets,
@@ -136,30 +164,53 @@ class CalculatorNode {
       std::function<void(CalculatorContext*)> schedule_callback,
       std::function<void(absl::Status)> error_callback,
       CounterFactory* counter_factory) ABSL_LOCKS_EXCLUDED(status_mutex_);
-  // Opens the node.
+
+  /**
+   * @brief Opens the node.
+   * @return absl::Status OkStatus() on success, any other status on failure.
+   */
   absl::Status OpenNode() ABSL_LOCKS_EXCLUDED(status_mutex_);
-  // Called when a source node's layer becomes active.
+
+  /**
+   * @brief Called when a source node's layer becomes active.
+   */
   void ActivateNode() ABSL_LOCKS_EXCLUDED(status_mutex_);
-  // Cleans up the node after the CalculatorGraph has been run. Deletes
-  // the Calculator managed by this node. graph_status is the status of
-  // the graph run.
+
+  /**
+   * @brief Cleans up the node after the CalculatorGraph has been run.
+   * @param graph_status The status of the graph run.
+   */
   void CleanupAfterRun(const absl::Status& graph_status)
       ABSL_LOCKS_EXCLUDED(status_mutex_);
 
-  // Returns true iff PrepareForRun() has been called (and types verified).
+  /**
+   * @brief Returns true iff PrepareForRun() has been called.
+   * @return True iff PrepareForRun() has been called.
+   */
   bool Prepared() const ABSL_LOCKS_EXCLUDED(status_mutex_);
-  // Returns true iff Open() has been called on the calculator.
+
+  /**
+   * @brief Returns true iff Open() has been called on the calculator.
+   * @return True iff Open() has been called on the calculator.
+   */
   bool Opened() const ABSL_LOCKS_EXCLUDED(status_mutex_);
-  // Returns true iff a source calculator's layer is active.
+
+  /**
+   * @brief Returns true iff a source calculator's layer is active.
+   * @return True iff a source calculator's layer is active.
+   */
   bool Active() const ABSL_LOCKS_EXCLUDED(status_mutex_);
-  // Returns true iff Close() has been called on the calculator.
+
+  /**
+   * @brief Returns true iff Close() has been called on the calculator.
+   * @return True iff Close() has been called on the calculator.
+   */
   bool Closed() const ABSL_LOCKS_EXCLUDED(status_mutex_);
 
-  // Returns true iff this is a source node.
-  //
-  // A source node has no input streams but has at least one output stream. A
-  // node with no input streams and no output streams is essentially a packet
-  // generator and is not a source node.
+  /**
+   * @brief Returns true iff this is a source node.
+   * @return True iff this is a source node.
+   */
   bool IsSource() const {
     return input_stream_handler_->NumInputStreams() == 0 &&
            output_stream_handler_->NumOutputStreams() != 0;
@@ -167,67 +218,94 @@ class CalculatorNode {
 
   int source_layer() const { return source_layer_; }
 
-  // Checks if the node can be scheduled; if so, increases current_in_flight_
-  // and returns true; otherwise, returns false.
-  // If true is returned, the scheduler must commit to executing the node, and
-  // then call EndScheduling when finished running it.
-  // If false is returned, the scheduler must not execute the node.
-  // This method is thread-safe.
+  /**
+   * @brief Checks if the node can be scheduled.
+   * @return True if the node can be scheduled.
+   */
   bool TryToBeginScheduling() ABSL_LOCKS_EXCLUDED(status_mutex_);
 
-  // Subtracts one from current_in_flight_ to allow a new invocation to be
-  // scheduled. Then, it checks scheduling_state_ and invokes SchedulingLoop()
-  // if necessary. This method is thread-safe.
-  // TODO: this could be done implicitly by the call to ProcessNode
-  // or CloseNode.
+  /**
+   * @brief Ends scheduling for the current invocation.
+   */
   void EndScheduling() ABSL_LOCKS_EXCLUDED(status_mutex_);
 
-  // Returns true if OpenNode() can be scheduled.
+  /**
+   * @brief Returns true if OpenNode() can be scheduled.
+   * @return True if OpenNode() can be scheduled.
+   */
   bool ReadyForOpen() const ABSL_LOCKS_EXCLUDED(status_mutex_);
 
-  // Called by the InputStreamHandler when all the input stream headers
-  // become available.
+  /**
+   * @brief Called by the InputStreamHandler when all the input stream headers
+   * become available.
+   */
   void InputStreamHeadersReady() ABSL_LOCKS_EXCLUDED(status_mutex_);
 
-  // Called by the InputSidePacketHandler when all the input side packets
-  // become available.
+  /**
+   * @brief Called by the InputSidePacketHandler when all the input side
+   * packets become available.
+   */
   void InputSidePacketsReady() ABSL_LOCKS_EXCLUDED(status_mutex_);
 
-  // Checks scheduling_state_, and then invokes SchedulingLoop() if necessary.
-  // This method is thread-safe.
+  /**
+   * @brief Checks scheduling_state_, and then invokes SchedulingLoop() if
+   * necessary.
+   */
   void CheckIfBecameReady() ABSL_LOCKS_EXCLUDED(status_mutex_);
 
-  // Called by SchedulerQueue when a node is opened.
+  /**
+   * @brief Called by SchedulerQueue when a node is opened.
+   */
   void NodeOpened() ABSL_LOCKS_EXCLUDED(status_mutex_);
 
-  // Returns the scheduler queue the node is assigned to.
+  /**
+   * @brief Returns the scheduler queue the node is assigned to.
+   * @return The scheduler queue the node is assigned to.
+   */
   internal::SchedulerQueue* GetSchedulerQueue() const {
     return scheduler_queue_;
   }
-  // Sets the scheduler queue the node is assigned to.
+
+  /**
+   * @brief Sets the scheduler queue the node is assigned to.
+   * @param queue The scheduler queue.
+   */
   void SetSchedulerQueue(internal::SchedulerQueue* queue) {
     scheduler_queue_ = queue;
   }
 
-  // Sets callbacks in the scheduler that should be invoked when an input queue
-  // becomes full/non-full.
+  /**
+   * @brief Sets callbacks in the scheduler that should be invoked when an input
+   * queue becomes full/non-full.
+   * @param becomes_full_callback The callback to call when the queue becomes
+   * full.
+   * @param becomes_not_full_callback The callback to call when the queue
+   * becomes not full.
+   */
   void SetQueueSizeCallbacks(
       InputStreamManager::QueueSizeCallback becomes_full_callback,
       InputStreamManager::QueueSizeCallback becomes_not_full_callback);
 
-  // Sets each of this node's input streams to use the specified
-  // max_queue_size to trigger callbacks.
+  /**
+   * @brief Sets each of this node's input streams to use the specified
+   * max_queue_size to trigger callbacks.
+   * @param max_queue_size The maximum queue size.
+   */
   void SetMaxInputStreamQueueSize(int max_queue_size);
 
-  // Closes the node's calculator and input and output streams.
-  // graph_status is the current status of the graph run. graph_run_ended
-  // indicates whether the graph run has ended.
+  /**
+   * @brief Closes the node's calculator and input and output streams.
+   * @param graph_status The status of the graph run.
+   * @param graph_run_ended True if the graph run has ended.
+   * @return absl::Status OkStatus() on success, any other status on failure.
+   */
   absl::Status CloseNode(const absl::Status& graph_status, bool graph_run_ended)
       ABSL_LOCKS_EXCLUDED(status_mutex_);
 
-  // Returns a pointer to the default calculator context that is used for
-  // sequential execution. A source node should always reuse its default
-  // calculator context.
+  /**
+   * @brief Returns a pointer to the default calculator context.
+   * @return A pointer to the default calculator context.
+   */
   CalculatorContext* GetDefaultCalculatorContext() const {
     return calculator_context_manager_.GetDefaultCalculatorContext();
   }
@@ -236,18 +314,24 @@ class CalculatorNode {
     return *calculator_state_;
   }
 
-  // Returns the node's contract.
-  // Must not be called before the CalculatorNode is initialized.
+  /**
+   * @brief Returns the node's contract.
+   * @return The node's contract.
+   */
   const CalculatorContract& Contract() const {
     return node_type_info_->Contract();
   }
 
-  // Returns the last timestamp bound used to schedule this node.
+  /**
+   * @brief Returns the last timestamp bound used to schedule this node.
+   * @return The last timestamp bound used to schedule this node.
+   */
   Timestamp GetLastTimestampBound() const { return last_timestamp_bound_; }
 
-  // Returns the stream monitoring info for this node consisting of a vector of
-  // tuples of input stream name, queue size, number of packets added, and
-  // minimum timestamp or bound.
+  /**
+   * @brief Returns the stream monitoring info for this node.
+   * @return The stream monitoring info for this node.
+   */
   CalculatorRuntimeInfo GetStreamMonitoringInfo() const;
 
  private:

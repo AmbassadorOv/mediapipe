@@ -37,6 +37,9 @@
 
 namespace mediapipe {
 
+/**
+ * @brief The context for a subgraph.
+ */
 class SubgraphContext {
  public:
   SubgraphContext() : SubgraphContext(nullptr, nullptr) {}
@@ -64,39 +67,60 @@ class SubgraphContext {
         options_map_(
             std::move(tool::MutableOptionsMap().Initialize(original_node_))) {}
 
+  /**
+   * @brief Returns the options of a specific type.
+   * @tparam T The type of the options.
+   * @return The options of the specified type.
+   */
   template <typename T>
   const T& Options() {
     return options_map_.Get<T>();
   }
 
+  /**
+   * @brief Returns a mutable pointer to the options of a specific type.
+   * @tparam T The type of the options.
+   * @return A mutable pointer to the options of the specified type.
+   */
   template <typename T>
   T* MutableOptions() {
     return options_map_.GetMutable<T>();
   }
 
+  /**
+   * @brief Returns true if the subgraph has options of a specific type.
+   * @tparam T The type of the options.
+   * @return True if the subgraph has options of the specified type.
+   */
   template <typename T>
   bool HasOptions() {
     return options_map_.Has<T>();
   }
 
+  /**
+   * @brief Returns the original node of the subgraph.
+   * @return The original node of the subgraph.
+   */
   const CalculatorGraphConfig::Node& OriginalNode() const {
     return original_node_;
   }
 
+  /**
+   * @brief Returns the service of a specific type.
+   * @tparam T The type of the service.
+   * @param service The service to get.
+   * @return The service of the specified type.
+   */
   template <typename T>
   ServiceBinding<T> Service(const GraphService<T>& service) const {
     return ServiceBinding<T>(service_manager_.GetServiceObject(service));
   }
 
-  // Gets interface to access resources (file system, assets, etc.) from
-  // subgraphs.
-  //
-  // NOTE: this is the preferred way to access resources from subgraphs and
-  // calculators as it allows for fine grained per graph configuration.
-  //
-  // Resources can be configured by setting a custom `kResourcesService` graph
-  // service on `CalculatorGraph`. The default resources service can be created
-  // and reused through `CreateDefaultResources`.
+  /**
+   * @brief Gets interface to access resources (file system, assets, etc.) from
+   * subgraphs.
+   * @return The resources interface.
+   */
   const Resources& GetResources() { return *resources_; }
 
  private:
@@ -115,20 +139,21 @@ class SubgraphContext {
   tool::MutableOptionsMap options_map_;
 };
 
-// Instances of this class are responsible for providing a subgraph config.
-// They are only used during graph construction. They do not stay alive once
-// the graph is running.
+/**
+ * @brief Instances of this class are responsible for providing a subgraph
+ * config.
+ */
 class Subgraph {
  public:
   using SubgraphOptions = CalculatorGraphConfig::Node;
   Subgraph();
   virtual ~Subgraph();
 
-  // Returns the config to use for one instantiation of the subgraph. The
-  // nodes and generators in this config will replace the subgraph node in
-  // the parent graph.
-  // Subclasses may use `SubgraphContext*` param to parameterize the config.
-  // TODO: make this static?
+  /**
+   * @brief Returns the config to use for one instantiation of the subgraph.
+   * @param sc The subgraph context.
+   * @return The config to use for one instantiation of the subgraph.
+   */
   virtual absl::StatusOr<CalculatorGraphConfig> GetConfig(SubgraphContext* sc) {
     if (sc == nullptr) {
       return GetConfig(SubgraphOptions{});
@@ -136,27 +161,44 @@ class Subgraph {
     return GetConfig(sc->OriginalNode());
   }
 
-  // Kept for backward compatibility - please override `GetConfig` taking
-  // `SubgraphContext*` param.
+  /**
+   * @brief Kept for backward compatibility - please override `GetConfig` taking
+   * `SubgraphContext*` param.
+   * @param options The subgraph options.
+   * @return The config to use for one instantiation of the subgraph.
+   */
   virtual absl::StatusOr<CalculatorGraphConfig> GetConfig(
       const SubgraphOptions& options) {
     return absl::UnimplementedError("Not implemented.");
   }
 
-  // Returns options of a specific type.
+  /**
+   * @brief Returns options of a specific type.
+   * @tparam T The type of the options.
+   * @param supgraph_options The subgraph options.
+   * @return The options of the specified type.
+   */
   template <typename T>
   static T GetOptions(const Subgraph::SubgraphOptions& supgraph_options) {
     return tool::OptionsMap().Initialize(supgraph_options).Get<T>();
   }
 
+  /**
+   * @brief Returns true if the subgraph has options of a specific type.
+   * @tparam T The type of the options.
+   * @param supgraph_options The subgraph options.
+   * @return True if the subgraph has options of the specified type.
+   */
   template <typename T>
   static bool HasOptions(const Subgraph::SubgraphOptions& supgraph_options) {
     return tool::OptionsMap().Initialize(supgraph_options).Has<T>();
   }
 
-  // Returns the CalculatorGraphConfig::Node specifying the subgraph.
-  // This provides to Subgraphs the same graph information that GetContract
-  // provides to Calculators.
+  /**
+   * @brief Returns the CalculatorGraphConfig::Node specifying the subgraph.
+   * @param supgraph_options The subgraph options.
+   * @return The CalculatorGraphConfig::Node specifying the subgraph.
+   */
   static CalculatorGraphConfig::Node GetNode(
       const Subgraph::SubgraphOptions& supgraph_options) {
     return supgraph_options;
@@ -165,12 +207,17 @@ class Subgraph {
 
 using SubgraphRegistry = GlobalFactoryRegistry<std::unique_ptr<Subgraph>>;
 
+/**
+ * @brief Macro for registering a subgraph.
+ */
 #define REGISTER_MEDIAPIPE_GRAPH(name)                             \
   REGISTER_FACTORY_FUNCTION_QUALIFIED(mediapipe::SubgraphRegistry, \
                                       subgraph_registration, name, \
                                       std::make_unique<name>)
 
-// A graph factory holding a literal CalculatorGraphConfig.
+/**
+ * @brief A graph factory holding a literal CalculatorGraphConfig.
+ */
 class ProtoSubgraph : public Subgraph {
  public:
   ProtoSubgraph(const CalculatorGraphConfig& config);
@@ -182,7 +229,9 @@ class ProtoSubgraph : public Subgraph {
   CalculatorGraphConfig config_;
 };
 
-// A graph factory holding a literal CalculatorGraphTemplate.
+/**
+ * @brief A graph factory holding a literal CalculatorGraphTemplate.
+ */
 class TemplateSubgraph : public Subgraph {
  public:
   TemplateSubgraph(const CalculatorGraphTemplate& templ);
@@ -194,7 +243,9 @@ class TemplateSubgraph : public Subgraph {
   CalculatorGraphTemplate templ_;
 };
 
-// A local registry of CalculatorGraphConfig definitions.
+/**
+ * @brief A local registry of CalculatorGraphConfig definitions.
+ */
 class GraphRegistry {
  public:
   // Creates a GraphRegistry derived from the GlobalFactoryRegistry,

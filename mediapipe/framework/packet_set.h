@@ -20,25 +20,31 @@
 
 namespace mediapipe {
 
-// A PacketSet is used to hold a collection of Packets accessed either
-// by index or by tag name.
+/**
+ * @brief A PacketSet is used to hold a collection of Packets accessed either
+ * by index or by tag name.
+ */
 typedef internal::Collection<Packet> PacketSet;
 
-// A similar construct for output side packets.
+/**
+ * @brief A similar construct for output side packets.
+ */
 class OutputSidePacket;
 typedef internal::Collection<OutputSidePacket,
                              internal::CollectionStorage::kStorePointer>
     OutputSidePacketSet;
 
-// Similar constructs for input and output streams.
-// TODO: Remove InputStreamSet and OutputStreamSet.
+/**
+ * @brief Similar constructs for input and output streams.
+ */
 class InputStream;
 typedef internal::Collection<InputStream*> InputStreamSet;
 class OutputStream;
 typedef internal::Collection<OutputStream*> OutputStreamSet;
 
-// Similar constructs for input and output stream shards.
-// TODO: Rename to InputStreamSet and OutputStreamSet.
+/**
+ * @brief Similar constructs for input and output stream shards.
+ */
 class InputStreamShard;
 typedef internal::Collection<InputStreamShard> InputStreamShardSet;
 class OutputStreamShard;

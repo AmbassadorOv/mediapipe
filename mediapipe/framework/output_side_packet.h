@@ -19,19 +19,26 @@
 
 namespace mediapipe {
 
-// The OutputSidePacket base class defines the output side packet interface
-// exposed to calculators in the CalculatorContext. The framework actually
-// creates instances of the OutputSidePacketImpl subclass, which has other
-// methods used by the framework.
+/**
+ * @brief Defines the output side packet interface exposed to calculators in
+ * the CalculatorContext.
+ *
+ * The framework actually creates instances of the OutputSidePacketImpl
+ * subclass, which has other methods used by the framework.
+ */
 class OutputSidePacket {
  public:
   OutputSidePacket() = default;
   virtual ~OutputSidePacket() = default;
 
-  // Sets the output side packet. The Packet must contain the data.
-  //
-  // NOTE: Set() cannot report errors via the return value. It uses an error
-  // callback function to report errors.
+  /**
+   * @brief Sets the output side packet. The Packet must contain the data.
+   *
+   * NOTE: Set() cannot report errors via the return value. It uses an error
+   * callback function to report errors.
+   *
+   * @param packet The packet to set.
+   */
   virtual void Set(const Packet& packet) = 0;
 };
 

@@ -26,25 +26,34 @@
 
 namespace mediapipe {
 
-// The GraphService API can be used to define extensions to a graph's execution
-// environment. These are, essentially, graph-level singletons, and are
-// available to all calculators in the graph (and in any subgraphs) without
-// requiring a manual connection.
-//
-// IMPORTANT: this is an experimental API. Get in touch with the MediaPipe team
-// if you want to use it. In most cases, you should use a side packet instead.
-
+/**
+ * @brief The base class for graph services.
+ *
+ * The GraphService API can be used to define extensions to a graph's execution
+ * environment. These are, essentially, graph-level singletons, and are
+ * available to all calculators in the graph (and in any subgraphs) without
+ * requiring a manual connection.
+ */
 class GraphServiceBase {
  public:
-  // TODO: fix services for which default init is broken, remove
-  // this setting.
+  /**
+   * @brief The support for default initialization.
+   */
   enum DefaultInitSupport {
     kAllowDefaultInitialization,
     kDisallowDefaultInitialization
   };
 
+  /**
+   * @brief Constructor.
+   * @param key The key of the service.
+   */
   explicit constexpr GraphServiceBase(const char* key) : key(key) {}
 
+  /**
+   * @brief Creates a default object for the service.
+   * @return A packet containing the default object.
+   */
   inline virtual absl::StatusOr<Packet> CreateDefaultObject() const {
     return DefaultInitializationUnsupported();
   }
@@ -52,40 +61,43 @@ class GraphServiceBase {
   const char* key;
 
  protected:
-  // `GraphService<T>` objects, deriving `GraphServiceBase` are designed to be
-  // global constants and not ever deleted through `GraphServiceBase`. Hence,
-  // protected and non-virtual destructor which helps to make `GraphService<T>`
-  // trivially destructible and properly defined as global constants.
-  //
-  // A class with any virtual functions should have a destructor that is either
-  // public and virtual or else protected and non-virtual.
-  // https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Rc-dtor-virtual
   ~GraphServiceBase() = default;
 
+  /**
+   * @brief Returns an error status indicating that default initialization is
+   * not supported.
+   * @return An error status.
+   */
   absl::Status DefaultInitializationUnsupported() const {
     return absl::UnimplementedError(absl::StrCat(
         "Graph service '", key, "' does not support default initialization"));
   }
 };
 
-// A global constant to refer a service:
-// - Requesting `CalculatorContract::UseService` from calculator
-// - Accessing `Calculator/SubgraphContext::Service`from calculator/subgraph
-// - Setting before graph initialization `CalculatorGraph::SetServiceObject`
-//
-// NOTE: In headers, define your graph service reference safely as following:
-// `inline constexpr GraphService<YourService> kYourService("YourService");`
-//
+/**
+ * @brief A global constant to refer a service.
+ *
+ * @tparam T The type of the service.
+ */
 template <typename T>
 class GraphService final : public GraphServiceBase {
  public:
   using type = T;
   using packet_type = std::shared_ptr<T>;
 
+  /**
+   * @brief Constructor.
+   * @param my_key The key of the service.
+   * @param default_init The support for default initialization.
+   */
   constexpr GraphService(const char* my_key, DefaultInitSupport default_init =
                                                  kDisallowDefaultInitialization)
       : GraphServiceBase(my_key), default_init_(default_init) {}
 
+  /**
+   * @brief Creates a default object for the service.
+   * @return A packet containing the default object.
+   */
   absl::StatusOr<Packet> CreateDefaultObject() const final {
     if (default_init_ != kAllowDefaultInitialization) {
       return DefaultInitializationUnsupported();
@@ -121,10 +133,24 @@ class GraphService final : public GraphServiceBase {
   DefaultInitSupport default_init_;
 };
 
+/**
+ * @brief A binding to a graph service.
+ *
+ * @tparam T The type of the service.
+ */
 template <typename T>
 class ServiceBinding {
  public:
+  /**
+   * @brief Returns true if the service is available.
+   * @return True if the service is available.
+   */
   bool IsAvailable() { return service_ != nullptr; }
+
+  /**
+   * @brief Gets the service object.
+   * @return The service object.
+   */
   T& GetObject() {
     ABSL_CHECK(service_) << "Service is unavailable.";
     return *service_;
